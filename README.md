@@ -24,6 +24,15 @@ This tool runs on a Factorio server and allows management of the Factorio server
 #### Manage mods
 ![Factorio Server Manager Screenshot](screenshots/Screenshot_Mods.png)
 
+## Companion mod
+
+This fork embeds a companion mod, `fsm-companion`. On every startup the manager
+writes it into the server's `mods/` directory and marks it enabled, so it stays
+present and on. Removing it disables the companion features, nothing else. The
+mod source lives in the `companion-mod` repository and is vendored into
+`src/companion/mod/` by `make sync-companion`, then embedded into the binary with
+Go `//go:embed`.
+
 ## [Installation and Usage](https://github.com/OpenFactorioServerManager/factorio-server-manager/wiki/Installation-and-Usage)
 
 ## [Development](https://github.com/OpenFactorioServerManager/factorio-server-manager/wiki/Development)

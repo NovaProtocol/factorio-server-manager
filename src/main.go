@@ -7,6 +7,7 @@ import (
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/api"
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
+	"github.com/OpenFactorioServerManager/factorio-server-manager/companion"
 	"github.com/OpenFactorioServerManager/factorio-server-manager/factorio"
 )
 
@@ -16,6 +17,11 @@ func main() {
 
 	// setup the required files for the mods
 	factorio.ModStartUp()
+
+	// install and enable the embedded companion mod
+	if err := companion.EnsureInstalled(); err != nil {
+		log.Printf("Error installing the companion mod: %v\n", err)
+	}
 
 	// Initialize Factorio Server struct
 	err := factorio.NewFactorioServer()
