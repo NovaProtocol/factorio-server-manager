@@ -29,7 +29,7 @@ VOLUME /opt/fsm-data /opt/factorio/saves /opt/factorio/mods /opt/factorio/config
 EXPOSE 80/tcp 34197/udp
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl tar xz-utils unzip jq \
+    && apt-get install -y --no-install-recommends ca-certificates curl tar xz-utils unzip jq \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
