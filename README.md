@@ -33,6 +33,13 @@ mod source lives in the `companion-mod` repository and is vendored into
 `src/companion/mod/` by `make sync-companion`, then embedded into the binary with
 Go `//go:embed`.
 
+## Container
+
+The `compose.yaml` and `Dockerfile` at the repository root build the fork from
+source (webpack UI plus the Go binary) and run it with the Factorio runtime
+dependencies. The game port is `34197/udp` and the web UI binds to
+`127.0.0.1:7090` on the host. State lives in `./fsm-data` and `./factorio`.
+
 ## [Installation and Usage](https://github.com/OpenFactorioServerManager/factorio-server-manager/wiki/Installation-and-Usage)
 
 ## [Development](https://github.com/OpenFactorioServerManager/factorio-server-manager/wiki/Development)

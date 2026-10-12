@@ -1,0 +1,20 @@
+services:
+  ofsm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: factorio-manager
+    container_name: factorio-manager_ofsm
+    restart: unless-stopped
+
+    ports:
+      - "34197:34197/udp"
+      - "127.0.0.1:7090:80"
+
+    environment:
+      FACTORIO_VERSION: ${FACTORIO_VERSION:-2.1.21}
+      RCON_PASS: ${RCON_PASS:-}
+
+    volumes:
+      - ./fsm-data:/opt/fsm-data
+      - ./factorio:/opt/factorio
