@@ -13,7 +13,11 @@ services:
 
     environment:
       FACTORIO_VERSION: ${FACTORIO_VERSION:-2.1.21}
-      RCON_PASS: ${RCON_PASS:-}
+      # Required: the manager refuses to start if any of these is missing.
+      ADMIN_USER: ${ADMIN_USER:?ADMIN_USER is required}
+      ADMIN_PASS: ${ADMIN_PASS:?ADMIN_PASS is required}
+      RCON_PASS: ${RCON_PASS:?RCON_PASS is required}
+      COOKIE_ENCRYPTION_KEY: ${COOKIE_ENCRYPTION_KEY:?COOKIE_ENCRYPTION_KEY is required}
 
     volumes:
       - ./fsm-data:/opt/fsm-data

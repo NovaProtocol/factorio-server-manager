@@ -1,6 +1,7 @@
 package companion
 
 import (
+	"archive/zip"
 	"embed"
 	"encoding/json"
 	"io/fs"
@@ -36,9 +37,17 @@ type modList struct {
 }
 
 // EnsureInstalled writes the embedded companion mod into the Factorio mods
-// directory and marks it enabled in mod-list.json. It runs on every startup, so
-// the mod cannot be dropped from the running server. Removing it from the mods
-// directory only disables the manager's companion features, nothing else.
+// directory as a zip and adds it to mod-list.json enabled. It runs on every
+// startup, so the mod is present and on by default without anyone having to
+// install it.
+//
+// The zip matters: the manager lists installed mods by walking .zip files
+// (factorio/mod_modInfo.go), so an unpacked directory would load in the game but
+// stay invisible on the Mods page.
+//
+// A disable is deliberately left alone: an entry that already exists in
+// mod-list.json keeps whatever state it has, so switching the companion off in
+// the mod list (or through the manager's own toggle) survives a restart.
 func EnsureInstalled() error {
 	config := bootstrap.GetConfig()
 
@@ -51,8 +60,14 @@ func EnsureInstalled() error {
 		return err
 	}
 
-	dest := filepath.Join(config.FactorioModsDir, ModName+"_"+version)
-	if err := writeModFiles(dest); err != nil {
+	if err := writeModZip(config.FactorioModsDir, version); err != nil {
+		return err
+	}
+
+	// Earlier builds installed the mod unpacked. Two copies of the same mod
+	// confuse Factorio, so drop the directory now that the zip is in place.
+	stale := filepath.Join(config.FactorioModsDir, ModName+"_"+version)
+	if err := os.RemoveAll(stale); err != nil {
 		return err
 	}
 
@@ -79,10 +94,26 @@ func embeddedVersion() (string, error) {
 	return info.Version, nil
 }
 
-func writeModFiles(dest string) error {
-	return fs.WalkDir(modFiles, "mod", func(path string, d fs.DirEntry, err error) error {
+// writeModZip packs the embedded mod into <mods>/<name>_<version>.zip, with the
+// ModName_version/ prefix Factorio expects inside a mod archive.
+func writeModZip(modsDir, version string) error {
+	prefix := ModName + "_" + version
+	dest := filepath.Join(modsDir, prefix+".zip")
+
+	file, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	archive := zip.NewWriter(file)
+
+	err = fs.WalkDir(modFiles, "mod", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		if d.IsDir() {
+			return nil
 		}
 
 		rel, err := filepath.Rel("mod", path)
@@ -90,9 +121,9 @@ func writeModFiles(dest string) error {
 			return err
 		}
 
-		target := filepath.Join(dest, rel)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
+		entry, err := archive.Create(prefix + "/" + filepath.ToSlash(rel))
+		if err != nil {
+			return err
 		}
 
 		data, err := fs.ReadFile(modFiles, path)
@@ -100,8 +131,15 @@ func writeModFiles(dest string) error {
 			return err
 		}
 
-		return os.WriteFile(target, data, 0o644)
+		_, err = entry.Write(data)
+		return err
 	})
+	if err != nil {
+		archive.Close()
+		return err
+	}
+
+	return archive.Close()
 }
 
 func enableMod(modsDir string) error {
@@ -117,17 +155,14 @@ func enableMod(modsDir string) error {
 		return err
 	}
 
-	found := false
-	for i := range list.Mods {
-		if list.Mods[i].Name == ModName {
-			list.Mods[i].Enabled = true
-			found = true
-			break
+	for _, mod := range list.Mods {
+		if mod.Name == ModName {
+			// Already listed: keep the state the operator chose, even a disable.
+			return nil
 		}
 	}
-	if !found {
-		list.Mods = append(list.Mods, modListEntry{Name: ModName, Enabled: true})
-	}
+
+	list.Mods = append(list.Mods, modListEntry{Name: ModName, Enabled: true})
 
 	out, err := json.MarshalIndent(list, "", "    ")
 	if err != nil {

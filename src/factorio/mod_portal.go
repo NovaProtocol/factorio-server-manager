@@ -103,7 +103,7 @@ func ModPortalModDetails(modId string) (ModPortalStruct, error, int) {
 	return mod, nil, resp.StatusCode
 }
 
-//Log the user into factorio, so mods can be downloaded
+// Log the user into factorio, so mods can be downloaded
 func FactorioLogin(username string, password string) (error, int) {
 	var err error
 

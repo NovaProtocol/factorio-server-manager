@@ -6,7 +6,10 @@ services:
     restart: "unless-stopped"
     environment:
       - "FACTORIO_VERSION=stable"
+      - "ADMIN_USER"
+      - "ADMIN_PASS"
       - "RCON_PASS"
+      - "COOKIE_ENCRYPTION_KEY"
     ports:
       - "80:80"
       - "34197:34197/udp"

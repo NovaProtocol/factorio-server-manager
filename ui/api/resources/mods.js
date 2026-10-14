@@ -1,4 +1,5 @@
 import client from "../client";
+import uploadFiles from "../upload";
 
 const mods = {
     installed: async () => {
@@ -17,22 +18,18 @@ const mods = {
         const response = await client.post('/api/mods/update', {modName, downloadUrl, fileName})
         return response.data;
     },
-    upload: async file => {
-        let formData = new FormData();
-        formData.append("mod_file", file);
-
-        const response = await client.post('/api/mods/upload', formData, {
-            headers: {
-                "Content-Type": "multipart/form-data"
-            }
-        });
-        return response.data;
-    },
+    upload: async (files, onProgress) => uploadFiles(files, {
+        url: '/api/mods/upload',
+        field: 'mod_file',
+        onProgress
+    }),
     deleteAll: async () => {
         const response = await client.post('/api/mods/delete/all');
         return response.data;
     },
     downloadAllURL: '/api/mods/download',
+    companionDownloadURL: '/api/mods/companion/download',
+    companionPortalURL: 'https://mods.factorio.com/mod/fsm-companion',
     portal: {
         login: async (username, password) => {
             const response = await client.post('/api/mods/portal/login', {

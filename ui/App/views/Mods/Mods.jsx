@@ -3,22 +3,19 @@ import React, {useEffect, useState} from "react";
 import modsResource from "../../../api/resources/mods";
 import Button from "../../components/Button";
 import server from "../../../api/resources/server";
-import TabControl from "../../components/Tabs/TabControl";
-import Tab from "../../components/Tabs/Tab";
-import AddMod from "./components/AddMod/AddMod";
 import UploadMod from "./components/UploadMod";
-import LoadMods from "./components/LoadMods";
-import Fuse from "fuse.js";
 import CreateModPack from "./components/CreateModPack";
 import ModPack from "./components/ModPack";
 import ModList from "./components/ModList";
+import CompanionMod from "./components/CompanionMod";
+
+const COMPANION_MOD_NAME = 'fsm-companion';
 
 const Mods = ({serverStatus}) => {
 
     const [installedMods, setInstalledMods] = useState([]);
     const [modPacks, setModPacks] = useState([])
     const [factorioVersion, setFactorioVersion] = useState(null);
-    const [fuse, setFuse] = useState(undefined);
     const [isDeletingAllMods, setIsDeletingAllMods] = useState(false);
     const [isUpdatingAllMods, setIsUpdatingAllMods] = useState(false);
     const [updatableMods, setUpdatableMods] = useState([]);
@@ -65,24 +62,6 @@ const Mods = ({serverStatus}) => {
                 fetchModPacks();
             })
 
-        // fetch list of mods
-        modsResource.portal.list()
-            .then(res => {
-                setFuse(new Fuse(res.results, {
-                    keys: [
-                        {
-                            "name": "name",
-                            weight: 2
-                        },
-                        {
-                            "name": "title",
-                            weight: 1
-                        }
-                    ],
-                    minMatchCharLength: 3
-                }));
-            });
-
     }, []);
 
     const toggleMod = modName => {
@@ -105,6 +84,11 @@ const Mods = ({serverStatus}) => {
 
     let disabled = serverStatus.running
 
+    // The companion is the manager's own mod: it gets its own panel instead of a
+    // row in the list, so it is not offered for update or delete like a normal mod.
+    const companionMod = installedMods.find(mod => mod.name === COMPANION_MOD_NAME);
+    const listedMods = installedMods.filter(mod => mod.name !== COMPANION_MOD_NAME);
+
     return (
         <div>
             {disabled ?
@@ -116,17 +100,11 @@ const Mods = ({serverStatus}) => {
                        }
                 />
                 :
-                <TabControl>
-                    <Tab title="Install Mod">
-                        <AddMod refetchInstalledMods={fetchInstalledMods} fuse={fuse}/>
-                    </Tab>
-                    <Tab title="Upload Mod">
-                        <UploadMod refetchInstalledMods={fetchInstalledMods}/>
-                    </Tab>
-                    <Tab title="Load Mods from Save">
-                        <LoadMods refreshMods={fetchInstalledMods}/>
-                    </Tab>
-                </TabControl>
+                <Panel
+                    title="Upload Mods"
+                    className="mb-6"
+                    content={<UploadMod refetchInstalledMods={fetchInstalledMods}/>}
+                />
             }
             <Panel
                 title="Mods"
@@ -136,7 +114,7 @@ const Mods = ({serverStatus}) => {
                              toggleMod={toggleMod}
                              updateMod={updateMod}
                              deleteMod={deleteMod}
-                             mods={installedMods}
+                             mods={listedMods}
                              factorioVersion={factorioVersion}
                              disabled={disabled}
                     />
@@ -154,6 +132,12 @@ const Mods = ({serverStatus}) => {
                            href={modsResource.downloadAllURL}>Download all Mods</a>
                     </>
                 }
+            />
+
+            <CompanionMod
+                companion={companionMod}
+                serverRunning={disabled}
+                onToggle={toggleMod}
             />
 
             <Panel

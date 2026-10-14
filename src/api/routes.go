@@ -172,6 +172,12 @@ var apiRoutes = Routes{
 		LoadModsFromSaveHandler,
 		true,
 	}, {
+		"SaveInfo",
+		"GET",
+		"/saves/info/{save}",
+		SaveInfoHandler,
+		false,
+	}, {
 		"LogTail",
 		"GET",
 		"/log/tail",
@@ -261,6 +267,30 @@ var apiRoutes = Routes{
 		"/settings/update",
 		UpdateServerSettings,
 		false,
+	}, {
+		"GetServerSettingsDefaults",
+		"GET",
+		"/settings/defaults",
+		GetServerSettingsDefaults,
+		false,
+	}, {
+		"GameSettings",
+		"GET",
+		"/game-settings",
+		GameSettingsHandler,
+		false,
+	}, {
+		"SaveGameSettings",
+		"POST",
+		"/game-settings",
+		SaveGameSettingsHandler,
+		true,
+	}, {
+		"DumpGameSettings",
+		"POST",
+		"/game-settings/dump",
+		DumpGameSettingsHandler,
+		true,
 	},
 	// Mod Portal Stuff
 	{
@@ -348,6 +378,12 @@ var apiRoutes = Routes{
 		"GET",
 		"/mods/download",
 		ModDownloadHandler,
+		false,
+	}, {
+		"DownloadCompanion",
+		"GET",
+		"/mods/companion/download",
+		CompanionDownloadHandler,
 		false,
 	},
 	// Mod Packs

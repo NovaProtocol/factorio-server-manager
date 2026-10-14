@@ -11,9 +11,32 @@ import (
 	"path/filepath"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
+	"github.com/OpenFactorioServerManager/factorio-server-manager/companion"
 	"github.com/OpenFactorioServerManager/factorio-server-manager/factorio"
 	"github.com/OpenFactorioServerManager/factorio-server-manager/lockfile"
 )
+
+// CompanionDownloadHandler serves the manager's own companion mod as a zip, so it
+// can be downloaded by itself instead of as part of the full mods archive.
+func CompanionDownloadHandler(w http.ResponseWriter, r *http.Request) {
+	config := bootstrap.GetConfig()
+
+	matches, err := filepath.Glob(filepath.Join(config.FactorioModsDir, companion.ModName+"_*.zip"))
+	if err != nil {
+		log.Printf("error looking for the companion mod: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if len(matches) == 0 {
+		http.Error(w, "companion mod is not installed", http.StatusNotFound)
+		return
+	}
+
+	path := matches[0]
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filepath.Base(path)))
+	http.ServeFile(w, r, path)
+}
 
 func CreateNewMods(w http.ResponseWriter) (modList factorio.Mods, resp interface{}, err error) {
 	config := bootstrap.GetConfig()

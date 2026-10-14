@@ -1,4 +1,5 @@
 import client from "../client";
+import uploadFiles from "../upload";
 
 export default {
     list: async (latest) => {
@@ -17,21 +18,19 @@ export default {
         const response = await client.get(`/api/saves/create/${name}`);
         return response.data;
     },
-    upload: async file => {
-        let formData = new FormData();
-        formData.append("savefile", file);
-
-        const response = await client.post(`/api/saves/upload`, formData, {
-            headers: {
-                "Content-Type": "multipart/form-data"
-            }
-        });
-        return response.data;
-    },
+    upload: async (files, onProgress) => uploadFiles(files, {
+        url: '/api/saves/upload',
+        field: 'savefile',
+        onProgress
+    }),
     mods: async save => {
         const response = await client.post("/api/saves/mods", {
             saveFile: save
         });
+        return response.data;
+    },
+    info: async save => {
+        const response = await client.get(`/api/saves/info/${encodeURIComponent(save)}`);
         return response.data;
     }
 }

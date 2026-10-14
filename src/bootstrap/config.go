@@ -53,6 +53,8 @@ type Config struct {
 	DatabaseFile            string `json:"database_file,omitempty"`
 	SQLiteDatabaseFile      string `json:"sq_lite_database_file,omitempty"`
 	CookieEncryptionKey     string `json:"cookie_encryption_key,omitempty"`
+	Username                string `json:"username,omitempty"`
+	Password                string `json:"password,omitempty"`
 	SettingsFile            string `json:"settings_file,omitempty"`
 	LogFile                 string `json:"log_file,omitempty"`
 	ConfFile                string `json:"-"`

@@ -27,11 +27,35 @@ This tool runs on a Factorio server and allows management of the Factorio server
 ## Companion mod
 
 This fork embeds a companion mod, `fsm-companion`. On every startup the manager
-writes it into the server's `mods/` directory and marks it enabled, so it stays
-present and on. Removing it disables the companion features, nothing else. The
+writes it into the server's `mods/` directory as `fsm-companion_<version>.zip` and
+adds it to `mod-list.json` enabled, so it is installed and on by default with
+nothing to do. The zip is deliberate: the manager lists mods by walking `.zip`
+files, so an unpacked directory would load in the game but never appear on the
+Mods page. Disabling it is remembered: an entry that is already in
+`mod-list.json` keeps whatever state it has, so turning the companion off in the
+mod list is not undone by a restart. The
 mod source lives in the `companion-mod` repository and is vendored into
 `src/companion/mod/` by `make sync-companion`, then embedded into the binary with
 Go `//go:embed`.
+
+## Configuration
+
+Four variables are required. The container refuses to start if any of them is
+missing, and every one of them is re-applied on each start:
+
+| Variable | Meaning |
+|---|---|
+| `ADMIN_USER` | Username of the admin account. |
+| `ADMIN_PASS` | Password of the admin account. |
+| `RCON_PASS` | RCON password the manager and the game server share. |
+| `COOKIE_ENCRYPTION_KEY` | Base64 key that signs the login session cookie; must decode to 16, 24 or 32 bytes (`openssl rand -base64 32`). |
+
+The admin credentials are configuration, not state. They are written into
+`conf.json` and enforced in the user database on every launch, so a restart puts
+them back even if they were changed in the interface: the account cannot be
+locked out or drifted from what the operator configured. Additional users can be
+added as normal; deleting the last admin is still refused. `FACTORIO_VERSION` is
+the one optional variable and defaults to `stable`.
 
 ## Container
 

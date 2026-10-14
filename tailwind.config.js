@@ -8,6 +8,14 @@ module.exports = {
     './ui/**/*.html',
   ],
   theme: {
+    container: {
+      screens: {
+        sm: '640px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
+      }
+    },
     extend: {
       width: {
         72: "18rem",

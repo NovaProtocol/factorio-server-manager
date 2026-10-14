@@ -68,7 +68,7 @@ type SaveHeader struct {
 	SavingReplay              bool                         `json:"saving_replay"`
 	AllowNonAdminDebugOptions bool                         `json:"allow_non_admin_debug_options"`
 	LoadedFrom                Version                      `json:"loaded_from"`
-	LoadedFromBuild           uint16                       `json:"loaded_from_build"`
+	LoadedFromBuild           uint32                       `json:"loaded_from_build"`
 	AllowedCommands           uint8                        `json:"allowed_commands"`
 	Stats                     map[byte][]map[uint16]uint32 `json:"stats,omitempty"`
 	Mods                      []Mod                        `json:"mods"`
@@ -184,11 +184,20 @@ func (h *SaveHeader) ReadFrom(r io.Reader) (err error) {
 	}
 	h.LoadedFrom = Version(loadedFrom)
 
-	_, err = r.Read(scratch[:2])
-	if err != nil {
-		return fmt.Errorf("read LoadedFromBuild: %v", err)
+	// 2.0 widened the build number from two bytes to four.
+	if !h.FactorioVersion.Less(Version{2, 0, 0, 0}) {
+		_, err = r.Read(scratch[:4])
+		if err != nil {
+			return fmt.Errorf("read LoadedFromBuild: %v", err)
+		}
+		h.LoadedFromBuild = binary.LittleEndian.Uint32(scratch[:4])
+	} else {
+		_, err = r.Read(scratch[:2])
+		if err != nil {
+			return fmt.Errorf("read LoadedFromBuild: %v", err)
+		}
+		h.LoadedFromBuild = uint32(binary.LittleEndian.Uint16(scratch[:2]))
 	}
-	h.LoadedFromBuild = binary.LittleEndian.Uint16(scratch[:2])
 
 	_, err = r.Read(scratch[:1])
 	if err != nil {
@@ -207,6 +216,16 @@ func (h *SaveHeader) ReadFrom(r io.Reader) (err error) {
 		h.Stats, err = h.readStats(r)
 		if err != nil {
 			return fmt.Errorf("read Stats: %v", err)
+		}
+	}
+
+	// 2.0 writes four bytes here whose meaning is unknown. Skipping them is what
+	// keeps the mod count on the right byte: read from this padding instead, a
+	// 2.x save reports zero mods.
+	if !h.FactorioVersion.Less(Version{2, 0, 0, 0}) {
+		_, err = r.Read(scratch[:4])
+		if err != nil {
+			return fmt.Errorf("read the 2.0 header padding: %v", err)
 		}
 	}
 

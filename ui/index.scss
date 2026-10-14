@@ -1,6 +1,14 @@
+
 @import "tailwindcss/base";
 @import "tailwindcss/utilities";
 @import "tailwindcss/components";
+
+/* Always reserve the scrollbar gutter so pages with and without a scrollbar
+   keep the same content width instead of shifting by ~15px. */
+html {
+  scrollbar-gutter: stable;
+}
+
 
 .accentuated-t {
   border-top: 2px solid rgba(255, 255, 255, 0.1);

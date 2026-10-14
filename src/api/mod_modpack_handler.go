@@ -224,9 +224,9 @@ func ModPackLoadHandler(w http.ResponseWriter, r *http.Request) {
 	resp = modPackMap[modPackName].Mods.ListInstalledMods()
 }
 
-//////////////////////////////////
+// ////////////////////////////////
 // Mods inside Mod Pack Handler //
-//////////////////////////////////
+// ////////////////////////////////
 func ModPackModListHandler(w http.ResponseWriter, r *http.Request) {
 	var resp interface{}
 

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -129,6 +130,42 @@ func ListSaves(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp = savesList
+}
+
+// SaveInfoHandler reports what a save file says about itself: the Factorio
+// version that wrote it and the mods it expects, read out of the header inside
+// the save. Read only, so unlike LoadModsFromSave it also works while the server
+// is running.
+func SaveInfoHandler(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	name := mux.Vars(r)["save"]
+	config := bootstrap.GetConfig()
+	path := filepath.Join(config.FactorioSavesDir, name)
+
+	f, err := factorio.OpenArchiveFile(path, "level.dat", "level-init.dat")
+	if err != nil {
+		resp = fmt.Sprintf("cannot open save level file: %v", err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	var header factorio.SaveHeader
+	if err := header.ReadFrom(f); err != nil {
+		resp = fmt.Sprintf("cannot read save header: %v", err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	resp = header
 }
 
 func DLSave(w http.ResponseWriter, r *http.Request) {
@@ -301,6 +338,240 @@ func LoadConfig(w http.ResponseWriter, r *http.Request) {
 	resp = configContents
 
 	log.Printf("Sent config.ini response")
+}
+
+// GameSettingsHandler returns the settings the game itself keeps in
+// mod-settings.dat, grouped by the three sections Factorio uses: startup,
+// runtime-global (map) and runtime-per-user (player). A missing file is reported
+// rather than treated as a failure, because the game only writes one once it has
+// run with mods that declare settings.
+func GameSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	path := factorio.ModSettingsPath()
+	settings, err := factorio.LoadModSettingsFile(path)
+	if err != nil {
+		resp = fmt.Sprintf("cannot read %s: %v", path, err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	sections := factorio.SettingsDict{}
+	if settings != nil {
+		sections = settings.Sections
+	}
+
+	// The dat carries values but not a setting's declared type or its bounds.
+	// Those come from the reference the game itself produced with --dump-data, so
+	// nothing here has to read or interpret any Lua.
+	reference := factorio.LoadSettingsReference()
+
+	declarations := map[string]factorio.SettingDeclaration{}
+	if reference != nil {
+		declarations = reference.Settings
+	}
+
+	for i := range sections {
+		entries, ok := sections[i].Value.(factorio.SettingsDict)
+		if !ok {
+			continue
+		}
+
+		for j := range entries {
+			declaration, found := declarations[entries[j].Key]
+			if !found {
+				continue
+			}
+
+			if setting, ok := entries[j].Value.(factorio.SettingsDict); ok {
+				setting.Set("declaration", declaration)
+				entries[j].Value = setting
+			}
+		}
+
+		sections[i].Value = entries
+	}
+
+	resp = map[string]interface{}{
+		"path":     path,
+		"found":    settings != nil,
+		"sections": sections,
+		"reference": map[string]interface{}{
+			"present":  reference != nil,
+			"current":  reference.Current(),
+			"settings": len(declarations),
+			"takenAt":  referenceTakenAt(reference),
+		},
+	}
+
+	log.Printf("Sent game settings response")
+}
+
+// GetServerSettingsDefaults returns the values the game ships in its own
+// server-settings.example.json, so the settings page can mark a field that still
+// holds its default.
+func GetServerSettingsDefaults(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	defaults, err := factorio.ServerSettingsDefaults()
+	if err != nil {
+		resp = err.Error()
+		log.Println(resp)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	resp = defaults
+}
+
+func referenceTakenAt(reference *factorio.SettingsReference) string {
+	if reference == nil {
+		return ""
+	}
+	return reference.TakenAt.Format(time.RFC3339)
+}
+
+// DumpGameSettingsHandler runs the game with --dump-data. The game then evaluates
+// every enabled mod's settings.lua itself and reports the settings, which becomes
+// the reference the editor checks values against.
+//
+// It has a second effect the caller may want: if mod-settings.dat is missing, the
+// game writes it while doing this, so the same button also pre-generates the file.
+func DumpGameSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	reference, err := factorio.DumpSettingsReference()
+	if err != nil {
+		resp = err.Error()
+		log.Println(resp)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Mods is the staleness key, which also carries the installed file names, so
+	// count only the entries that are mod names.
+	enabled := 0
+	for _, entry := range reference.Mods {
+		if !strings.HasPrefix(entry, "file:") {
+			enabled++
+		}
+	}
+
+	resp = map[string]interface{}{
+		"settings":     len(reference.Settings),
+		"mods":         enabled,
+		"takenAt":      reference.TakenAt.Format(time.RFC3339),
+		"settingsFile": factorio.ModSettingsPath(),
+	}
+
+	log.Printf("Dumped the settings reference: %d settings", len(reference.Settings))
+}
+
+// SaveGameSettingsHandler writes changed settings back to mod-settings.dat. Only
+// the value inside an existing setting is touched, the mod's own declaration is
+// checked first, an undeclared setting is refused unless the caller forces it,
+// and the previous file is kept as a backup.
+func SaveGameSettingsHandler(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	var request struct {
+		Changes []struct {
+			Section string `json:"section"`
+			Name    string `json:"name"`
+			Value   string `json:"value"`
+			Force   bool   `json:"force"`
+		} `json:"changes"`
+	}
+
+	if _, err := ReadFromRequestBody(w, r, &request); err != nil {
+		return
+	}
+
+	path := factorio.ModSettingsPath()
+
+	settings, err := factorio.LoadModSettingsFile(path)
+	if err != nil {
+		resp = fmt.Sprintf("cannot read %s: %v", path, err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if settings == nil {
+		resp = fmt.Sprintf("there is no %s to write to", path)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Declarations come from the game's own dump, so a setting counts as known
+	// only when an enabled mod really declares it.
+	reference := factorio.LoadSettingsReference()
+
+	declarations := map[string]factorio.SettingDeclaration{}
+	if reference != nil {
+		declarations = reference.Settings
+	}
+
+	for _, change := range request.Changes {
+		declaration, known := declarations[change.Name]
+
+		if !known && !change.Force {
+			resp = fmt.Sprintf("%s is not declared by any installed mod, so its type is unknown", change.Name)
+			w.WriteHeader(http.StatusConflict)
+			return
+		}
+
+		if err := factorio.ApplySettingChange(settings, declaration, known, change.Section, change.Name, change.Value); err != nil {
+			resp = err.Error()
+			log.Println(resp)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	encoded, err := factorio.EncodeModSettings(settings)
+	if err != nil {
+		resp = fmt.Sprintf("cannot encode the settings: %v", err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	backup, err := factorio.WriteModSettings(path, encoded)
+	if err != nil {
+		resp = err.Error()
+		log.Println(resp)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	resp = map[string]interface{}{
+		"written": len(request.Changes),
+		"backup":  backup,
+		"path":    path,
+	}
+
+	log.Printf("Wrote %d mod setting(s) to %s", len(request.Changes), path)
 }
 
 func StartServer(w http.ResponseWriter, r *http.Request) {

@@ -21,8 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /build/factorio-server-man
 # Runtime, glibc for the Factorio server binaries.
 FROM ubuntu:24.04
 
-ENV FACTORIO_VERSION=stable \
-    RCON_PASS=""
+ENV FACTORIO_VERSION=stable
 
 VOLUME /opt/fsm-data /opt/factorio/saves /opt/factorio/mods /opt/factorio/config
 

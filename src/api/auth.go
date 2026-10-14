@@ -52,28 +52,55 @@ func SetupAuth() {
 		panic(err)
 	}
 
-	var userCount int64
-	auth.db.Model(&User{}).Count(&userCount)
+	// The admin credentials are configuration, not state: they are re-applied on
+	// every start so the account cannot drift from what the operator configured.
+	if err := auth.ensureConfiguredAdmin(config.Username, config.Password); err != nil {
+		log.Printf("Error enforcing the configured admin credentials: %s", err)
+		panic(err)
+	}
+}
 
-	if userCount == 0 {
-		// no user created yet, create a default one
-		var password = bootstrap.GenerateRandomPassword()
+// ensureConfiguredAdmin makes the configured credentials authoritative. It runs on
+// every start, so the admin account cannot drift from the configuration: a
+// password changed through the interface, or a database left behind by an earlier
+// run, is put back to what the operator configured. Other users are untouched.
+func (a *Auth) ensureConfiguredAdmin(username, password string) error {
+	if username == "" || password == "" {
+		return errors.New("the admin username and password must both be configured")
+	}
 
-		var user User
-		user.Username = "admin"
-		user.Password = password
-		user.Role = "admin"
-
-		err := auth.addUser(user)
-		if err != nil {
-			log.Printf("Error adding admin user to db: %s", err)
-			panic(err)
+	user, err := a.getUser(username)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		newUser := User{Username: username, Password: password, Role: "admin"}
+		if err := a.addUser(newUser); err != nil {
+			return err
 		}
 
-		log.Println("Created default admin user. Please change it's password as soon as possible.")
-		log.Printf("Username: %s", user.Username)
-		log.Printf("Password: %s", password)
+		log.Printf("Created the configured admin user %q", username)
+		return nil
 	}
+	if err != nil {
+		return err
+	}
+
+	if user.Role != "admin" {
+		user.Role = "admin"
+		if err := a.db.Save(&user).Error; err != nil {
+			return err
+		}
+
+		log.Printf("Restored the admin role on user %q", username)
+	}
+
+	if err := a.checkPassword(username, password); err != nil {
+		if err := a.changePassword(username, password); err != nil {
+			return err
+		}
+
+		log.Printf("Reset the password of admin user %q to the configured one", username)
+	}
+
+	return nil
 }
 
 func (a *Auth) checkPassword(username, password string) error {

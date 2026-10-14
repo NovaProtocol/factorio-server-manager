@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import Modal from "./Modal";
 import Button from "./Button";
 
-function ConfirmDialog({title, content, isOpen, close, onSuccess}) {
+function ConfirmDialog({title, content, isOpen, close, onSuccess, confirmLabel = 'Confirm', cancelLabel = 'Cancel'}) {
 
     const [isLoading, setIsLoading] = useState(false);
 
@@ -21,8 +21,8 @@ function ConfirmDialog({title, content, isOpen, close, onSuccess}) {
             content={content}
             actions={
                 <>
-                    <Button size="sm" type="danger" className="mr-2" onClick={close}>Cancel</Button>
-                    <Button size="sm" isLoading={isLoading} type="success" onClick={confirm}>Confirm</Button>
+                    <Button size="sm" type="danger" className="mr-2" onClick={close}>{cancelLabel}</Button>
+                    <Button size="sm" isLoading={isLoading} type="success" onClick={confirm}>{confirmLabel}</Button>
                 </>
             }
             isOpen={isOpen}
