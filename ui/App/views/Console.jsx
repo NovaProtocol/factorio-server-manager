@@ -42,6 +42,16 @@ const Console = ({serverStatus}) => {
                                    }
                                }}
                         />
+                        {/* Everything here is passed to the game as typed, so the one
+                            way to hurt a save from this page is to type a script
+                            command. The manager itself never sends one. */}
+                        <p className="text-gray-light text-sm mt-3">
+                            Commands run in the game exactly as typed. Script commands
+                            (<code>/c</code>, <code>/sc</code>, <code>/silent-command</code>) permanently
+                            disable achievements for the save, so the manager never sends one on
+                            your behalf — the dashboards and the speed control use the companion
+                            mod's own commands instead.
+                        </p>
                     </>
                     : <p className="text-red-light pt-4">
                         The console is not available, because Factorio is not running.

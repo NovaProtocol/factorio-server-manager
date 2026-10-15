@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - removed CGO as dependency
 
 ### Security
+- The console page states that the text it passes to the game runs as typed, and that a script command (`/c`, `/sc`, `/silent-command`) permanently disables achievements for the save. The manager itself only ever sends the companion mod's plain commands, so nothing it does on its own can stop achievements
 - The login endpoint is rate limited per address and username: eight failed attempts inside five minutes answer `429` with a `Retry-After`, and a successful login clears the counter. It is the only unauthenticated endpoint, so it is the only throttled one
 - The routes that change server state — stop, kill, remove save, create save — are `POST`, not `GET`, so a link or an `<img>` cannot trigger them; the session cookie states `SameSite=Lax` explicitly rather than relying on the browser default
 - `conf.json` (admin and RCON passwords in clear) is `chmod 0600` on every start, and `factorio.auth` (the mod portal token) is written `0600`

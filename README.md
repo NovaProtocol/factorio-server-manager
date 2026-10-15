@@ -205,7 +205,10 @@ the default role there.
 Things a `user` deliberately does **not** get: saves, server settings, game
 settings, logs, user management and the mod portal credentials page. The console
 stays able to send commands, because the game has no per-player command
-permission: anyone who may type in the console may type any command in it.
+permission: anyone who may type in the console may type any command in it. That page
+passes text through untouched, so a script command typed there (`/c`, `/sc`,
+`/silent-command`) permanently disables achievements for the save — the manager
+never sends one itself, and the page says so under the input.
 
 ## Mod portal credentials
 
