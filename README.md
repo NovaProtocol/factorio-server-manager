@@ -13,7 +13,7 @@ at the bottom of this file still apply where the two overlap.
 
 ## Features
 * Allows control of the Factorio Server, starting and stopping the Factorio binary.
-* Allows the management of save files, upload, download and delete saves.
+* Allows the management of save files, upload, download and delete saves, with a list that sorts by name, date or size on a click of the column
 * Manage installed mods, upload new ones and more
 * Manage modpacks, so it is easier to play with different configurations
 * Live dashboards for the running game: power per grid, production per planet and

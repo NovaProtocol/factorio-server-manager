@@ -1,15 +1,16 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import savesResource from "../../../api/resources/saves";
 import Panel from "../../components/Panel";
 import CreateSaveForm from "./components/CreateSaveForm";
 import UploadSaveForm from "./components/UploadSaveForm";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faDownload, faTrashAlt} from "@fortawesome/free-solid-svg-icons";
+import {faDownload, faSort, faSortDown, faSortUp, faTrashAlt} from "@fortawesome/free-solid-svg-icons";
 
 const Saves = ({serverStatus}) => {
 
     const [saves, setSaves] = useState([]);
     const [saveInfo, setSaveInfo] = useState({});
+    const [sort, setSort] = useState({column: null, ascending: true});
 
     const loadSaveInfo = (name) => {
         savesResource.info(name)
@@ -31,6 +32,55 @@ const Saves = ({serverStatus}) => {
     useEffect(() => {
         updateList();
     }, []);
+
+    // A header sorts by its column, and clicking it again reverses the order.
+    // Size and date start with the biggest and newest first, because that is what
+    // someone clicking them is looking for; a name starts at A.
+    const clickSort = column => {
+        setSort(current => {
+            if (current.column === column) {
+                return {column, ascending: !current.ascending};
+            }
+            return {column, ascending: column === 'name'};
+        });
+    };
+
+    const sortedSaves = useMemo(() => {
+        if (!sort.column) {
+            return saves;
+        }
+
+        const value = save => {
+            if (sort.column === 'size') {
+                return save.size ?? 0;
+            }
+            if (sort.column === 'last_mod') {
+                return new Date(save.last_mod ?? 0).getTime();
+            }
+            return String(save.name ?? '');
+        };
+
+        return [...saves].sort((a, b) => {
+            const left = value(a);
+            const right = value(b);
+            const order = typeof left === 'string' ? left.localeCompare(right) : left - right;
+            return sort.ascending ? order : -order;
+        });
+    }, [saves, sort]);
+
+    const SortHeader = ({column, children}) => {
+        const active = sort.column === column;
+        const icon = !active ? faSort : (sort.ascending ? faSortUp : faSortDown);
+
+        return (
+            <th className={`pr-4 cursor-pointer select-none hover:text-orange ${active ? 'text-orange' : ''}`}
+                onClick={() => clickSort(column)}
+                aria-sort={active ? (sort.ascending ? 'ascending' : 'descending') : 'none'}>
+                {children}
+                <FontAwesomeIcon className="ml-2 text-gray-light" icon={icon}/>
+            </th>
+        );
+    };
 
     const deleteSave = async (save) => {
         const res = await savesResource.delete(save);
@@ -91,15 +141,20 @@ const Saves = ({serverStatus}) => {
                         <table className="w-full">
                             <thead>
                             <tr className="text-left py-1">
-                                <th>Name</th>
-                                <th>Factorio Version</th>
-                                <th>Last Modified At</th>
-                                <th>Size</th>
+                                <SortHeader column="name">Name</SortHeader>
+                                <th className="pr-4">
+                                    Factorio Version
+                                    {/* no sorting here: the version comes from a
+                                        header read that arrives after the list, so
+                                        rows would reorder under the cursor */}
+                                </th>
+                                <SortHeader column="last_mod">Last Modified At</SortHeader>
+                                <SortHeader column="size">Size</SortHeader>
                                 <th>Actions</th>
                             </tr>
                             </thead>
                             <tbody>
-                            {saves.map(save => {
+                            {sortedSaves.map(save => {
                                 const info = saveInfo[save.name];
 
                                 return (
