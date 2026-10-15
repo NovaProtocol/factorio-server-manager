@@ -107,14 +107,6 @@ const Science = () => {
                                       labels={{production: 'Produced', consumption: 'Consumed'}}/>}
             />
 
-            <p className="text-gray-light text-sm mb-3">
-                Science per minute is the rate a full set of packs is consumed, so it counts only the packs the
-                current research needs — a pack it does not use cannot limit it. The effective figure is measured
-                from the research bar, which runs ahead of pack consumption by the total research productivity: lab
-                modules <em>and</em> the research-productivity technology, which is why the two numbers differ by
-                more than the modules alone would explain.
-            </p>
-
             <Panel
                 title="Packs"
                 className="mb-6"

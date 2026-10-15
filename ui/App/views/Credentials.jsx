@@ -42,10 +42,6 @@ const PasswordForm = ({onResult}) => {
                 <InputPassword register={register('password', {required: true})}/>
                 <Error error={errors.password} message="Password is required"/>
             </div>
-            <p className="mb-4 text-sm text-gray-light">
-                The password is only sent to Factorio to obtain a login token. Only the
-                returned token is stored, next to the username.
-            </p>
             <Button type="success" isLoading={isSigningIn} isSubmit={true}>Sign In</Button>
         </form>
     );
@@ -82,8 +78,7 @@ const TokenForm = ({onResult}) => {
                        placeholder="Paste your token"/>
                 <Error error={errors.token} message="Token is required"/>
             </div>
-            <p className="mb-4 text-sm text-gray-light">
-                The token is on your Factorio profile page, under "Personal token".{" "}
+            <p className="mb-4 text-sm">
                 <a className="text-blue hover:text-blue-light"
                    href={TOKEN_PAGE}
                    target="_blank"
@@ -104,10 +99,6 @@ const AccountData = ({status}) => {
             className="mb-6"
             content={
                 <>
-                    <p className="mb-4 text-sm text-gray-light">
-                        Fetched from the mod portal with the stored credentials. This is what
-                        the account can reach for mod downloads.
-                    </p>
                     <div className="mb-4">
                         <span className="font-bold text-dirty-white">Bookmarked mods: </span>
                         <span className="text-gray-light">{names.length}</span>
@@ -178,13 +169,9 @@ const Credentials = () => {
                                 <p className="mb-2">
                                     Signed in as <span className="font-bold text-dirty-white">{status.username}</span>.
                                 </p>
-                                {status.error
-                                    ? <p className="mb-4 text-red-light">
+                                {status.error &&
+                                    <p className="mb-4 text-red-light">
                                         The mod portal rejected these credentials: {status.error}
-                                    </p>
-                                    : <p className="mb-4 text-sm text-gray-light">
-                                        A stored credential is what lets gated mods download. Updating a
-                                        mod on the Mods page uses it.
                                     </p>
                                 }
                                 <Button type="danger" isLoading={isLoggingOut} onClick={logout}>Log Out</Button>

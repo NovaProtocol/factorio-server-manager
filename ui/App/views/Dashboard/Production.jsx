@@ -138,11 +138,6 @@ const Production = () => {
                                            onSelect={setSurface} lifetime={lifetime} window={timeWindow}/>}
 
                         <WindowTabs value={timeWindow} onChange={setTimeWindow}/>
-
-                        <p className="text-gray-light text-sm">
-                            {items.length} item kinds and {fluids.length} fluids on {activeSurface}.
-                            Click any row to graph it.
-                        </p>
                     </>
                 }
             />

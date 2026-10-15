@@ -85,12 +85,6 @@ const CompanionMod = ({companion, serverRunning, readOnly = false, onToggle, onI
                                     <span className="ml-2 whitespace-nowrap text-gray-light">from the {source}</span>
                                 }
                             </div>
-                            <p className="mt-2 max-w-3xl text-sm text-gray-light">
-                                Some of this server manager's extra features are provided by the
-                                FSM Companion mod. The manager fetches the version it pins and keeps it
-                                on your server; switch it off and those features are unavailable, and
-                                nothing else about your server changes.
-                            </p>
                             {status?.error &&
                                 <p className="mt-2 max-w-3xl text-sm text-red-light">
                                     Could not fetch it: {status.error}

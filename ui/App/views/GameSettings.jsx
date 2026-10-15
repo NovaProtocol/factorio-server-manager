@@ -421,11 +421,6 @@ const GameSettings = ({serverStatus}) => {
                                 <TabControl>
                                     {SECTIONS.map(section => (
                                         <Tab key={section.key} title={section.title}>
-                                            <div className="mb-3 text-sm text-gray-light">
-                                                {section.note}
-                                                {' '}
-                                                Leave a field empty to use the value the mod declares as its default.
-                                            </div>
                                             <SettingsTable
                                                 section={section.key}
                                                 settings={sections ? sections[section.key] : null}
@@ -441,12 +436,6 @@ const GameSettings = ({serverStatus}) => {
                             </>
                             : <div>
                                 <p className="text-orange font-bold mb-2">No mod-settings.dat found.</p>
-                                <p className="text-sm text-gray-light mb-4">
-                                    Looked for <span className="text-dirty-white">{modSettings.path}</span>.
-                                    The game writes this file the first time it runs with mods that declare
-                                    their own settings. Generating the settings reference has it write the
-                                    file now, filling it with the declared defaults.
-                                </p>
                                 {isRunning &&
                                     <p className="mb-3 text-red font-bold">
                                         Stop the server first: the game needs exclusive use of its directory.

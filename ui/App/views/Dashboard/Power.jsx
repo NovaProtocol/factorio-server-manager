@@ -177,14 +177,6 @@ const Power = () => {
                 <PowerTable title="Generators" entries={generators} watts={watts} series={series} onSelect={setSeries}/>
             </div>
 
-            {report &&
-                <p className="text-gray-light text-sm mb-6">
-                    Every planet is measured, then {activeSurface} in full. Power is shown in real units: the game
-                    reports joules per tick, converted here at 60 ticks per second. Satisfaction is the tightest grid
-                    carrying at least 1% of the load, so micro-grids cannot drag it to zero. Click a prototype to
-                    graph it, and the two lines show what that grid made against what it drew.
-                </p>
-            }
         </>
     );
 };

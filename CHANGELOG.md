@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The Power page opens on every planet's grid at once, and the Production page on every planet's output; clicking a row graphs that item, fluid or prototype
 
 ### Changed
+- Removed the explanatory paragraphs under the dashboards, the console, the credentials page, the companion card and the game settings page. The panels show their data and their controls, nothing else
 - The compose file can be pointed at an existing installation: `FSM_DATA_DIR` and `FACTORIO_DIR` say where the manager's state and the game's data live, so an upgrade keeps the users, saves, mods and server settings already there instead of starting empty. `FSM_WEB_BIND`, `FSM_WEB_PORT` and `FSM_GAME_PORT` move the published ports, so a second installation can sit beside the first
 - The dashboards read the companion mod one report scope at a time, cached for 5 seconds and shared between viewers, instead of polling one large document every 20 seconds; a browser poll is never queued behind a running fetch — it is answered with the last data and refreshed on the next poll
 - Time windows are a row of tabs like the settings pages, not a dropdown; graphs are Chart.js so bars can be hovered for a readout
@@ -33,7 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - removed CGO as dependency
 
 ### Security
-- The console page states that the text it passes to the game runs as typed, and that a script command (`/c`, `/sc`, `/silent-command`) permanently disables achievements for the save. The manager itself only ever sends the companion mod's plain commands, so nothing it does on its own can stop achievements
+- Nothing the manager sends the game on its own can stop achievements: every call is one of the companion mod's plain commands (`/companion-report`, `/companion-chunk`, `/companion-tick`, `/companion-speed`). The console page passes text through as typed, so a script command typed there is the admin's own doing
 - The login endpoint is rate limited per address and username: eight failed attempts inside five minutes answer `429` with a `Retry-After`, and a successful login clears the counter. It is the only unauthenticated endpoint, so it is the only throttled one
 - The routes that change server state — stop, kill, remove save, create save — are `POST`, not `GET`, so a link or an `<img>` cannot trigger them; the session cookie states `SameSite=Lax` explicitly rather than relying on the browser default
 - `conf.json` (admin and RCON passwords in clear) is `chmod 0600` on every start, and `factorio.auth` (the mod portal token) is written `0600`
