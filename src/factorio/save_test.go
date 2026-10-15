@@ -13,7 +13,7 @@ func Test1_1_14(t *testing.T) {
 	defer file.Close()
 
 	var header SaveHeader
-	err = header.ReadFrom(file)
+	err = header.ReadHeader(file)
 	if err != nil {
 		t.Fatalf("Error reading header: %s", err)
 	}
@@ -62,7 +62,7 @@ func Test1_1(t *testing.T) {
 	defer file.Close()
 
 	var header SaveHeader
-	err = header.ReadFrom(file)
+	err = header.ReadHeader(file)
 	if err != nil {
 		t.Fatalf("Error reading header: %s", err)
 	}
@@ -112,7 +112,7 @@ func Test0_18(t *testing.T) {
 	defer file.Close()
 
 	var header SaveHeader
-	err = header.ReadFrom(file)
+	err = header.ReadHeader(file)
 	if err != nil {
 		t.Fatalf("Error reading header: %s", err)
 	}
@@ -160,7 +160,7 @@ func Test0_17(t *testing.T) {
 	defer file.Close()
 
 	var header SaveHeader
-	err = header.ReadFrom(file)
+	err = header.ReadHeader(file)
 	if err != nil {
 		t.Fatalf("Error reading header: %s", err)
 	}
@@ -204,7 +204,7 @@ func Test0_16(t *testing.T) {
 	defer file.Close()
 
 	var header SaveHeader
-	err = header.ReadFrom(file)
+	err = header.ReadHeader(file)
 	if err != nil {
 		t.Fatalf("Error reading header: %s", err)
 	}
@@ -248,7 +248,7 @@ func Test0_15(t *testing.T) {
 	defer file.Close()
 
 	var header SaveHeader
-	err = header.ReadFrom(file)
+	err = header.ReadHeader(file)
 	if err != nil {
 		t.Fatalf("Error reading header: %s", err)
 	}
@@ -291,7 +291,7 @@ func Test0_14(t *testing.T) {
 	defer file.Close()
 
 	var header SaveHeader
-	err = header.ReadFrom(file)
+	err = header.ReadHeader(file)
 	if err != nil {
 		t.Fatalf("Error reading header: %s", err)
 	}
@@ -334,7 +334,7 @@ func Test0_13(t *testing.T) {
 	defer file.Close()
 
 	var header SaveHeader
-	err = header.ReadFrom(file)
+	err = header.ReadHeader(file)
 	if err != nil {
 		t.Fatalf("Error reading header: %s", err)
 	}

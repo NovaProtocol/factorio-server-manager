@@ -27,7 +27,7 @@ type ModsResultList struct {
 	ModsResult []ModsResult `json:"mods"`
 }
 
-var FileLock lockfile.FileLock = lockfile.NewLock()
+var FileLock *lockfile.FileLock = lockfile.NewLock()
 
 func NewMods(destination string) (Mods, error) {
 	var err error

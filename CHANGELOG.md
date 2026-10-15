@@ -4,10 +4,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.11.0] - TBD
+### Added
+- A Game Speed panel on the Controls page: set the game's speed as a speed (1 = normal) or as a max UPS (0.5 = 30 UPS), Save applies it in game at once and the companion mod re-applies it after every save load. Only usable while the game is running, admin only. Each field owns its value while focused, the twin is solved on focus-out, and Save sends what was typed rather than what is displayed, so 1 max UPS stays 1 instead of 1.00002
+- Every manager-to-game call is now a plain mod command. The UPS sampler used to ask the game with `/sc` (a script command, which permanently disables achievements for a save); the companion mod's `companion-tick` and `companion-speed` commands are plain commands and used instead
+- The Server Status pill in the sidebar and on the Controls page reports the game's real update rate: the manager asks the game for its tick every 5 seconds and divides by wall time, so the pill reads `Running - 20.6 UPS`, and it goes to `Running - 0.0 UPS` when the game is paused
+- Credentials page under FSM Administration: sign in to the Factorio mod portal with a password or with a personal token, sign out, and see the account data the stored credentials reach (the account's bookmarked mods)
+- Role-based access. `admin` keeps full access; `user` is read-only: console, mod list, dashboard and server status only, with no logs, settings, saves, users or credentials
+- The Create User form can now create `user`-role accounts; it previously only ever created admins
+- The Mods page reports the companion mod's pinned version, where the running copy came from, and fetches it on demand
+- Three dashboard pages under Game replacing the single Dashboard: **Power**, **Production** and **Science**, each with a time-window picker (5s to 1000h, plus all time) and a graph of the 300 samples behind the game's own statistics graphs
+- Power is shown in real units (kW/MW/GW) converted from the game's joules-per-tick, with both production and consumption
+- The Power page opens on every planet's grid at once, and the Production page on every planet's output; clicking a row graphs that item, fluid or prototype
+
 ### Changed
+- The dashboards read the companion mod one report scope at a time, cached for 5 seconds and shared between viewers, instead of polling one large document every 20 seconds; a browser poll is never queued behind a running fetch — it is answered with the last data and refreshed on the next poll
+- Time windows are a row of tabs like the settings pages, not a dropdown; graphs are Chart.js so bars can be hovered for a readout
+- Every dashboard list has a filter box, and long tables scroll with a themed scrollbar instead of the browser default
+- Science per minute counts only the packs the current research needs, and a second figure is measured from the research bar to show the effect of lab productivity
+- The measured science figure survives a server pause: the mod keeps the last good reading with its game-time age, and the tile says when a number was held rather than freshly measured
+- Graphs overlay production and consumption as two lines, with both numbers on hover
+- `tailwind.config.js` lists `transparent` and `current` explicitly: `colors` replaces the palette, so `bg-transparent` was silently generating nothing
+- The companion mod is no longer embedded in the manager binary. The manager installs the one version named by `CompanionVersion`, fetched from the companion repository's GitHub release (public, so no credential is needed), with the mod portal as a fallback when a credential is stored
+- Removed `make sync-companion`, `scripts/sync-companion.sh` and the vendored `src/companion/mod/`; the `companion-mod` repository is now the only copy of the mod source
 - Configuration environment variables are now uppercase and prefixed with FSM
 - updated all dependencies - Thanks to @jannaahs and @knoxfighter
 - removed CGO as dependency
+
+### Security
+- The login endpoint is rate limited per address and username: eight failed attempts inside five minutes answer `429` with a `Retry-After`, and a successful login clears the counter. It is the only unauthenticated endpoint, so it is the only throttled one
+- The routes that change server state — stop, kill, remove save, create save — are `POST`, not `GET`, so a link or an `<img>` cannot trigger them; the session cookie states `SameSite=Lax` explicitly rather than relying on the browser default
+- `conf.json` (admin and RCON passwords in clear) is `chmod 0600` on every start, and `factorio.auth` (the mod portal token) is written `0600`
+
+### Fixed
+- `go vet` is clean: `lockfile.NewLock` returns a pointer instead of copying a mutex, and the three save/version readers no longer shadow the `io.ReaderFrom` contract with a mismatched signature
+- Removed the unused `fuse.js` dependency; the lockfile is back in sync with `package.json`
+- Every compose file caps the container log at 10 MB × 3 files and carries a healthcheck, instead of leaving the docker log unbounded
+- `docker/docker-compose.yaml` and `docker-compose.simple.yaml` now build this repository. They used to pull `ofsm/ofsm:latest`, which is upstream and has none of the features in this changelog
 
 ## [0.10.1] - 2021-03-09
 ### Fixed

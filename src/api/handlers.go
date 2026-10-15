@@ -158,7 +158,7 @@ func SaveInfoHandler(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 
 	var header factorio.SaveHeader
-	if err := header.ReadFrom(f); err != nil {
+	if err := header.ReadHeader(f); err != nil {
 		resp = fmt.Sprintf("cannot read save header: %v", err)
 		log.Println(resp)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -756,13 +756,24 @@ func LoginUser(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Logging in user: %s", user.Username)
 
+	throttleKey := loginThrottleKey(r, user.Username)
+	if allowed, wait := loginLimiter.allow(throttleKey); !allowed {
+		log.Printf("Login throttled for %s", throttleKey)
+		tooManyAttempts(w, wait)
+		resp = fmt.Sprintf("too many login attempts, try again in %d seconds", int(wait.Seconds())+1)
+		return
+	}
+
 	err = auth.checkPassword(user.Username, user.Password)
 	if err != nil {
+		loginLimiter.failure(throttleKey)
 		resp = fmt.Sprintf("Password for user %s wrong", user.Username)
 		log.Println(resp)
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+
+	loginLimiter.success(throttleKey)
 
 	session, resp, err := ReadSessionStore(w, r, "authentication")
 	if err != nil {

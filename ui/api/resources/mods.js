@@ -30,22 +30,15 @@ const mods = {
     downloadAllURL: '/api/mods/download',
     companionDownloadURL: '/api/mods/companion/download',
     companionPortalURL: 'https://mods.factorio.com/mod/fsm-companion',
+    companionStatus: async () => {
+        const response = await client.get('/api/mods/companion/status');
+        return response.data;
+    },
+    companionInstall: async () => {
+        const response = await client.post('/api/mods/companion/install');
+        return response.data;
+    },
     portal: {
-        login: async (username, password) => {
-            const response = await client.post('/api/mods/portal/login', {
-                username,
-                password
-            });
-            return response.data;
-        },
-        status: async () => {
-            const response = await client.get('/api/mods/portal/loginstatus');
-            return response.data;
-        },
-        logout: async () => {
-            const response = await client.get('/api/mods/portal/logout');
-            return response.data
-        },
         installMultiple: async mods => {
             const response = await client.post('/api/mods/portal/install/multiple', mods);
             return response.data

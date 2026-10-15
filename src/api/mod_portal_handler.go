@@ -93,6 +93,29 @@ func ModPortalInstallHandler(w http.ResponseWriter, r *http.Request) {
 	resp = mods.ListInstalledMods()
 }
 
+// CredentialsStatus is what the credentials page renders: whether an account is
+// stored, whose it is, the account data the stored credentials reach, and a
+// message when they are present but the mod portal rejected them.
+type CredentialsStatus struct {
+	LoggedIn  bool     `json:"loggedIn"`
+	Username  string   `json:"username"`
+	Bookmarks []string `json:"bookmarks"`
+	Error     string   `json:"error"`
+}
+
+func credentialsStatus(credentials factorio.Credentials, bookmarks []string, statusError string) CredentialsStatus {
+	if bookmarks == nil {
+		bookmarks = []string{}
+	}
+
+	return CredentialsStatus{
+		LoggedIn:  credentials.Username != "" && credentials.Userkey != "",
+		Username:  credentials.Username,
+		Bookmarks: bookmarks,
+		Error:     statusError,
+	}
+}
+
 func ModPortalLoginHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var resp interface{}
@@ -113,15 +136,34 @@ func ModPortalLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err, statusCode := factorio.FactorioLogin(data.Username, data.Password)
-	w.WriteHeader(statusCode)
 	if err != nil {
 		resp = fmt.Sprintf("Error trying to login into Factorio: %s", err)
 		log.Println(resp)
+		w.WriteHeader(statusCode)
 		return
 	}
+
+	// FactorioLogin stores the account. Report the same shape the status
+	// endpoint does, so the page can render the result without a second call.
+	credentials := factorio.Credentials{Username: data.Username, Userkey: ""}
+	if _, err := credentials.Load(); err != nil {
+		log.Printf("Error loading the stored credentials after login: %s", err)
+	}
+
+	bookmarks, bookmarksErr, _ := credentials.Bookmarks()
+	if bookmarksErr != nil {
+		resp = credentialsStatus(credentials, nil, bookmarksErr.Error())
+		return
+	}
+
+	resp = credentialsStatus(credentials, bookmarks, "")
 }
 
-func ModPortalLoginStatusHandler(w http.ResponseWriter, r *http.Request) {
+// ModPortalTokenLoginHandler stores a profile token directly, without trading a
+// password for one. The token is the one shown on factorio.com/profile and is
+// the same value the mod download uses as its `token` query parameter, so a
+// token accepted here is immediately usable for gated downloads.
+func ModPortalTokenLoginHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var resp interface{}
 
@@ -129,15 +171,74 @@ func ModPortalLoginStatusHandler(w http.ResponseWriter, r *http.Request) {
 		WriteResponse(w, resp)
 	}()
 
-	var credentials factorio.Credentials
-	resp, err = credentials.Load()
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 
+	var data struct {
+		Username string `json:"username"`
+		Token    string `json:"token"`
+	}
+	resp, err = ReadFromRequestBody(w, r, &data)
 	if err != nil {
-		resp = fmt.Sprintf("Error getting the factorio credentials: %s", err)
+		return
+	}
+
+	if data.Username == "" || data.Token == "" {
+		resp = "a username and a token are both required"
+		log.Println(resp)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	credentials := factorio.Credentials{Username: data.Username, Userkey: data.Token}
+
+	// Verify before storing, so an invalid token is never written to disk.
+	bookmarks, err, statusCode := credentials.Bookmarks()
+	if err != nil {
+		resp = fmt.Sprintf("The mod portal rejected the token: %s", err)
+		log.Println(resp)
+		w.WriteHeader(statusCode)
+		return
+	}
+
+	if err := credentials.Save(); err != nil {
+		resp = fmt.Sprintf("Error saving the Factorio credentials: %s", err)
 		log.Println(resp)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("Stored Factorio mod portal token for user %q", data.Username)
+	resp = credentialsStatus(credentials, bookmarks, "")
+}
+
+func ModPortalLoginStatusHandler(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	var credentials factorio.Credentials
+	loggedIn, err := credentials.Load()
+	if err != nil {
+		resp = credentialsStatus(credentials, nil, err.Error())
+		return
+	}
+
+	if !loggedIn {
+		resp = credentialsStatus(credentials, nil, "")
+		return
+	}
+
+	bookmarks, err, _ := credentials.Bookmarks()
+	if err != nil {
+		resp = credentialsStatus(credentials, nil, err.Error())
+		return
+	}
+
+	resp = credentialsStatus(credentials, bookmarks, "")
 }
 
 func ModPortalLogoutHandler(w http.ResponseWriter, r *http.Request) {

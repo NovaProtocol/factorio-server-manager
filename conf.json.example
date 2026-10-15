@@ -1,9 +1,8 @@
 {
-	"username": "",
-	"password": "",
-	"rcon_pass": "",
+	"rcon_pass": "wDdLpzJtbXbuyDijLSUqcqvP",
 	"sq_lite_database_file": "sqlite.db",
-	"cookie_encryption_key": "",
+	"cookie_encryption_key": "h1Elebyddg1pnu2oFMVYiBsFgnAVsXFWeLYX2H+bwn4=",
 	"settings_file": "server-settings.json",
-	"log_file": "factorio-server-manager.log"
+	"log_file": "factorio-server-manager.log",
+	"secure": false
 }

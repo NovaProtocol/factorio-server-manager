@@ -5,9 +5,13 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faBars} from "@fortawesome/free-solid-svg-icons";
 import {Flash} from "./Flash";
 
-const Layout = ({handleLogout, serverStatus}) => {
+const Layout = ({handleLogout, serverStatus, currentUser}) => {
 
     const [isNavCollapsed, setIsNavCollapsed] = useState(true);
+
+    // The `user` role is read-only: it gets the console, the mod list, the
+    // dashboard and the help page, and nothing that changes the server.
+    const isAdmin = currentUser?.role === 'admin';
 
     const Status = ({info}) => {
 
@@ -17,6 +21,9 @@ const Layout = ({handleLogout, serverStatus}) => {
         if (info && info.running) {
             text = 'Running';
             color = 'green';
+            if (info.ups !== undefined) {
+                text = `Running - ${info.ups.toFixed(1)} UPS`;
+            }
         } else if (info && !info.running) {
             text = 'Stopped';
             color = 'red';
@@ -67,19 +74,28 @@ const Layout = ({handleLogout, serverStatus}) => {
                     <div className="py-4 px-2 accentuated">
                         <h1 className="text-dirty-white text-lg mb-2 mx-4">Server Management</h1>
                         <div className="text-white text-center rounded-sm bg-black shadow-inner mx-4 p-1">
-                            <Link to="/">Controls</Link>
-                            <Link to="/saves">Saves</Link>
+                            {isAdmin && <Link to="/">Controls</Link>}
+                            {isAdmin && <Link to="/saves">Saves</Link>}
                             <Link to="/mods">Mods</Link>
-                            <Link to="/server-settings">Server Settings</Link>
-                            <Link to="/game-settings">Game Settings</Link>
-                            <Link to="/console">Console</Link>
-                            <Link to="/logs" last={true}>Logs</Link>
+                            {isAdmin && <Link to="/server-settings">Server Settings</Link>}
+                            {isAdmin && <Link to="/game-settings">Game Settings</Link>}
+                            <Link to="/console" last={!isAdmin}>Console</Link>
+                            {isAdmin && <Link to="/logs" last={true}>Logs</Link>}
+                        </div>
+                    </div>
+                    <div className="py-4 px-2 accentuated">
+                        <h1 className="text-dirty-white text-lg mb-2 mx-4">Game</h1>
+                        <div className="text-white text-center rounded-sm bg-black shadow-inner mx-4 p-1">
+                            <Link to="/dashboard-power">Power</Link>
+                            <Link to="/dashboard-production">Production</Link>
+                            <Link to="/dashboard-science" last={true}>Science</Link>
                         </div>
                     </div>
                     <div className="py-4 px-2 accentuated">
                         <h1 className="text-dirty-white text-lg mb-2 mx-4">FSM Administration</h1>
                         <div className="text-white text-center rounded-sm bg-black shadow-inner mx-4 p-1">
-                            <Link to="/user-management">Users</Link>
+                            {isAdmin && <Link to="/user-management">Users</Link>}
+                            {isAdmin && <Link to="/credentials">Credentials</Link>}
                             <Link to="/help" last={true}>Help</Link>
                         </div>
                     </div>

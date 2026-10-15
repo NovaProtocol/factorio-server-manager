@@ -5,7 +5,7 @@ import modsResource from "../../../../api/resources/mods";
 import ModList from "./ModList";
 import ConfirmDialog from "../../../components/ConfirmDialog";
 
-const ModPack = ({modPack, reloadModPacks, factorioVersion, reloadMods, disabled = false}) => {
+const ModPack = ({modPack, reloadModPacks, factorioVersion, reloadMods, disabled = false, readOnly = false}) => {
 
     const [isLoading, setIsLoading] = useState(false);
     const [isLoadModPackDialogOpen, setIsLoadModPackDialogOpen] = useState(false);
@@ -72,8 +72,9 @@ const ModPack = ({modPack, reloadModPacks, factorioVersion, reloadMods, disabled
                         </>
                     }
 
-                    <FontAwesomeIcon className="text-red cursor-pointer hover:text-red-light inline"
-                                     onClick={() => deleteModPack(modPack.name)} icon={faTrashAlt}/>
+                    {!readOnly &&
+                        <FontAwesomeIcon className="text-red cursor-pointer hover:text-red-light inline"
+                                         onClick={() => deleteModPack(modPack.name)} icon={faTrashAlt}/>}
                 </div>
             </div>
             <ModList mods={modPack.mods.mods}
@@ -81,6 +82,7 @@ const ModPack = ({modPack, reloadModPacks, factorioVersion, reloadMods, disabled
                      toggleMod={toggleMod}
                      updateMod={updateMod}
                      deleteMod={deleteMod}
+                     disabled={disabled || readOnly}
             />
         </div>
     )

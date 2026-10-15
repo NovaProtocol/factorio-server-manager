@@ -31,6 +31,11 @@ module.exports = {
       }
     },
     colors: {
+      // `colors` replaces the palette rather than extending it, so these two have
+      // to be listed: without `transparent`, `bg-transparent` silently generates
+      // nothing and an input falls back to the browser's white box.
+      "transparent": "transparent",
+      "current": "currentColor",
       "gray": {
         dark: "#313030",
         medium: "#403F40",

@@ -10,7 +10,7 @@ export default {
         return response.data;
     },
     stop: async () => {
-        const response = await client.get('/api/server/stop');
+        const response = await client.post('/api/server/stop');
         return response.data;
     },
     start: async (ip, port, savefile) => {
@@ -22,7 +22,7 @@ export default {
         return response.data;
     },
     kill: async () => {
-        const response = await client.get('/api/server/kill');
+        const response = await client.post('/api/server/kill');
         return response.data;
     }
 }

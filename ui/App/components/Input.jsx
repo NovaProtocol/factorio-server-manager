@@ -6,6 +6,8 @@ const Input = ({
                    type = "text",
                    defaultValue = undefined,
                    hasAutoComplete = true,
+                   onChange = undefined,
+                   onBlur = undefined,
                    onKeyDown = () => undefined,
                    min = undefined,
                    max = undefined,
@@ -18,6 +20,8 @@ const Input = ({
             placeholder={placeholder}
             {...register}
             type={type}
+            onChange={onChange}
+            onBlur={onBlur}
             onKeyDown={onKeyDown}
             autoComplete={hasAutoComplete ? "on" : "off"}
             defaultValue={defaultValue}

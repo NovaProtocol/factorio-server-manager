@@ -124,7 +124,7 @@ func (v *version24) UnmarshalBinary(data []byte) error {
 // version24 is a 48-bit (16, 16, 16) optimized version structure
 type version48 Version
 
-func (v *version48) ReadFrom(r io.Reader, game Version) error {
+func (v *version48) readVersion(r io.Reader, game Version) error {
 	for i := 0; i < 3; i++ {
 		n, err := readOptimUint(r, game, 16)
 		if err != nil {

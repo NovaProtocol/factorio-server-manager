@@ -18,10 +18,8 @@ func main() {
 	// setup the required files for the mods
 	factorio.ModStartUp()
 
-	// install and enable the embedded companion mod
-	if err := companion.EnsureInstalled(); err != nil {
-		log.Printf("Error installing the companion mod: %v\n", err)
-	}
+	// install and enable the pinned companion mod
+	companion.EnsureInstalled()
 
 	// Initialize Factorio Server struct
 	err := factorio.NewFactorioServer()

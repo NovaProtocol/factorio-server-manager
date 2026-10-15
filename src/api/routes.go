@@ -122,6 +122,26 @@ func NewRouter() *mux.Router {
 		Methods("GET").
 		Name("Help").
 		Handler(http.StripPrefix("/help", http.FileServer(http.Dir("./app/"))))
+	subRouter.Path("/dashboard").
+		Methods("GET").
+		Name("Dashboard").
+		Handler(http.StripPrefix("/dashboard", http.FileServer(http.Dir("./app/"))))
+	subRouter.Path("/dashboard-power").
+		Methods("GET").
+		Name("Dashboard power").
+		Handler(http.StripPrefix("/dashboard-power", http.FileServer(http.Dir("./app/"))))
+	subRouter.Path("/dashboard-production").
+		Methods("GET").
+		Name("Dashboard production").
+		Handler(http.StripPrefix("/dashboard-production", http.FileServer(http.Dir("./app/"))))
+	subRouter.Path("/dashboard-science").
+		Methods("GET").
+		Name("Dashboard science").
+		Handler(http.StripPrefix("/dashboard-science", http.FileServer(http.Dir("./app/"))))
+	subRouter.Path("/credentials").
+		Methods("GET").
+		Name("Credentials").
+		Handler(http.StripPrefix("/credentials", http.FileServer(http.Dir("./app/"))))
 
 	// catch all route
 	mainRouter.PathPrefix("/").
@@ -134,80 +154,90 @@ func NewRouter() *mux.Router {
 
 // Defines all API REST endpoints
 // All routes are prefixed with /api
+//
+// A route reads permission from its handler: handlers wrapped in RequireAdmin
+// answer 403 to a non-admin, every other handler is open to any authenticated
+// account. The `user` role is therefore read-only by construction — it can only
+// reach the unwrapped handlers below.
 var apiRoutes = Routes{
+	// Saves — admin only
 	{
 		"ListSaves",
 		"GET",
 		"/saves/list",
-		ListSaves,
+		RequireAdmin(ListSaves),
 		false,
 	}, {
 		"DlSave",
 		"GET",
 		"/saves/dl/{save}",
-		DLSave,
+		RequireAdmin(DLSave),
 		false,
 	}, {
 		"UploadSave",
 		"POST",
 		"/saves/upload",
-		UploadSave,
+		RequireAdmin(UploadSave),
 		false,
 	}, {
 		"RemoveSave",
-		"GET",
+		"POST",
 		"/saves/rm/{save}",
-		RemoveSave,
+		RequireAdmin(RemoveSave),
 		false,
 	}, {
 		"CreateSave",
-		"GET",
+		"POST",
 		"/saves/create/{save}",
-		CreateSaveHandler,
+		RequireAdmin(CreateSaveHandler),
 		true,
 	}, {
 		"LoadModsFromSave",
 		"POST",
 		"/saves/mods",
-		LoadModsFromSaveHandler,
+		RequireAdmin(LoadModsFromSaveHandler),
 		true,
 	}, {
 		"SaveInfo",
 		"GET",
 		"/saves/info/{save}",
-		SaveInfoHandler,
+		RequireAdmin(SaveInfoHandler),
 		false,
 	}, {
+		// Logs — admin only
 		"LogTail",
 		"GET",
 		"/log/tail",
-		LogTail,
+		RequireAdmin(LogTail),
 		false,
 	}, {
+		// The Factorio config.ini, shown on the server settings page — admin only
 		"LoadConfig",
 		"GET",
 		"/config",
-		LoadConfig,
+		RequireAdmin(LoadConfig),
 		false,
 	}, {
+		// Server control — admin only
 		"StartServer",
 		"POST",
 		"/server/start",
-		StartServer,
+		RequireAdmin(StartServer),
 		true,
 	}, {
 		"StopServer",
-		"GET",
+		"POST",
 		"/server/stop",
-		StopServer,
+		RequireAdmin(StopServer),
 		false,
 	}, {
 		"KillServer",
-		"GET",
+		"POST",
 		"/server/kill",
-		KillServer,
+		RequireAdmin(KillServer),
 		false,
 	}, {
+		// Read-only status, needed by every page including the dashboard
 		"RunningServer",
 		"GET",
 		"/server/status",
@@ -232,67 +262,71 @@ var apiRoutes = Routes{
 		GetCurrentLogin,
 		false,
 	}, {
+		// User management — admin only
 		"ListUsers",
 		"GET",
 		"/user/list",
-		ListUsers,
+		RequireAdmin(ListUsers),
 		false,
 	}, {
 		"AddUser",
 		"POST",
 		"/user/add",
-		AddUser,
+		RequireAdmin(AddUser),
 		false,
 	}, {
 		"RemoveUser",
 		"POST",
 		"/user/remove",
-		RemoveUser,
+		RequireAdmin(RemoveUser),
 		false,
 	}, {
+		// Any account may change its own password
 		"ChangePassword",
 		"POST",
 		"/user/password",
 		ChangePassword,
 		false,
 	}, {
+		// Server settings — admin only
 		"GetServerSettings",
 		"GET",
 		"/settings",
-		GetServerSettings,
+		RequireAdmin(GetServerSettings),
 		false,
 	}, {
 		"UpdateServerSettings",
 		"POST",
 		"/settings/update",
-		UpdateServerSettings,
+		RequireAdmin(UpdateServerSettings),
 		false,
 	}, {
 		"GetServerSettingsDefaults",
 		"GET",
 		"/settings/defaults",
-		GetServerSettingsDefaults,
+		RequireAdmin(GetServerSettingsDefaults),
 		false,
 	}, {
+		// Game settings — admin only
 		"GameSettings",
 		"GET",
 		"/game-settings",
-		GameSettingsHandler,
+		RequireAdmin(GameSettingsHandler),
 		false,
 	}, {
 		"SaveGameSettings",
 		"POST",
 		"/game-settings",
-		SaveGameSettingsHandler,
+		RequireAdmin(SaveGameSettingsHandler),
 		true,
 	}, {
 		"DumpGameSettings",
 		"POST",
 		"/game-settings/dump",
-		DumpGameSettingsHandler,
+		RequireAdmin(DumpGameSettingsHandler),
 		true,
 	},
-	// Mod Portal Stuff
+	// Mod Portal browsing is public within the manager; installing a mod is not.
 	{
 		"ModPortalListAllMods",
 		"GET",
@@ -309,34 +343,43 @@ var apiRoutes = Routes{
 		"ModPortalInstallMod",
 		"POST",
 		"/mods/portal/install",
-		ModPortalInstallHandler,
+		RequireAdmin(ModPortalInstallHandler),
 		true,
-	}, {
-		"ModPortalLogin",
-		"POST",
-		"/mods/portal/login",
-		ModPortalLoginHandler,
-		false,
-	}, {
-		"ModPortalLoginStatus",
-		"GET",
-		"/mods/portal/loginstatus",
-		ModPortalLoginStatusHandler,
-		false,
-	}, {
-		"ModPortalLogout",
-		"GET",
-		"/mods/portal/logout",
-		ModPortalLogoutHandler,
-		false,
 	}, {
 		"ModPortalInstallMultiple",
 		"POST",
 		"/mods/portal/install/multiple",
-		ModPortalInstallMultipleHandler,
+		RequireAdmin(ModPortalInstallMultipleHandler),
 		true,
 	},
-	// Mods Stuff
+	// Factorio mod portal credentials — admin only. A stored credential is what
+	// makes a gated mod download work, so it is managed from one place.
+	{
+		"CredentialsLogin",
+		"POST",
+		"/credentials/login",
+		RequireAdmin(ModPortalLoginHandler),
+		false,
+	}, {
+		"CredentialsToken",
+		"POST",
+		"/credentials/token",
+		RequireAdmin(ModPortalTokenLoginHandler),
+		false,
+	}, {
+		"CredentialsStatus",
+		"GET",
+		"/credentials/status",
+		RequireAdmin(ModPortalLoginStatusHandler),
+		false,
+	}, {
+		"CredentialsLogout",
+		"GET",
+		"/credentials/logout",
+		RequireAdmin(ModPortalLogoutHandler),
+		false,
+	},
+	// Mods — listing is open, everything that changes state is admin only.
 	{
 		"ListInstalledMods",
 		"GET",
@@ -347,31 +390,31 @@ var apiRoutes = Routes{
 		"ToggleMod",
 		"POST",
 		"/mods/toggle",
-		ModToggleHandler,
+		RequireAdmin(ModToggleHandler),
 		true,
 	}, {
 		"DeleteMod",
 		"POST",
 		"/mods/delete",
-		ModDeleteHandler,
+		RequireAdmin(ModDeleteHandler),
 		true,
 	}, {
 		"DeleteAllMods",
 		"POST",
 		"/mods/delete/all",
-		ModDeleteAllHandler,
+		RequireAdmin(ModDeleteAllHandler),
 		true,
 	}, {
 		"UpdateMod",
 		"POST",
 		"/mods/update",
-		ModUpdateHandler,
+		RequireAdmin(ModUpdateHandler),
 		true,
 	}, {
 		"UploadMod",
 		"POST",
 		"/mods/upload",
-		ModUploadHandler,
+		RequireAdmin(ModUploadHandler),
 		true,
 	}, {
 		"DownloadMods",
@@ -385,8 +428,23 @@ var apiRoutes = Routes{
 		"/mods/companion/download",
 		CompanionDownloadHandler,
 		false,
+	}, {
+		// The pinned version the manager installs, and where it came from
+		"CompanionStatus",
+		"GET",
+		"/mods/companion/status",
+		CompanionStatusHandler,
+		false,
+	}, {
+		// Fetching installs a mod, so it follows the same rule as every other
+		// mod change: refused while the server is running.
+		"CompanionInstall",
+		"POST",
+		"/mods/companion/install",
+		RequireAdmin(CompanionInstallHandler),
+		true,
 	},
-	// Mod Packs
+	// Mod Packs — listing and downloading are open, the rest is admin only.
 	{
 		"ModPacksList",
 		"GET",
@@ -397,13 +455,13 @@ var apiRoutes = Routes{
 		"ModPackCreate",
 		"POST",
 		"/mods/packs/create",
-		ModPackCreateHandler,
+		RequireAdmin(ModPackCreateHandler),
 		false,
 	}, {
 		"ModPackDelete",
 		"POST",
 		"/mods/packs/{modpack}/delete",
-		ModPackDeleteHandler,
+		RequireAdmin(ModPackDeleteHandler),
 		false,
 	}, {
 		"ModPackDownload",
@@ -415,7 +473,7 @@ var apiRoutes = Routes{
 		"LoadModPack",
 		"POST",
 		"/mods/packs/{modpack}/load",
-		ModPackLoadHandler,
+		RequireAdmin(ModPackLoadHandler),
 		true,
 	},
 	// Mods inside Mod Packs
@@ -429,43 +487,82 @@ var apiRoutes = Routes{
 		"ModPackToggleMod",
 		"POST",
 		"/mods/packs/{modpack}/mod/toggle",
-		ModPackModToggleHandler,
+		RequireAdmin(ModPackModToggleHandler),
 		false,
 	}, {
 		"ModPackDeleteMod",
 		"POST",
 		"/mods/packs/{modpack}/mod/delete",
-		ModPackModDeleteHandler,
+		RequireAdmin(ModPackModDeleteHandler),
 		false,
 	}, {
 		"ModPackDeleteAllMod",
 		"POST",
 		"/mods/packs/{modpack}/mod/delete/all",
-		ModPackModDeleteAllHandler,
+		RequireAdmin(ModPackModDeleteAllHandler),
 		false,
 	}, {
 		"ModPackUpdateMod",
 		"POST",
 		"/mods/packs/{modpack}/mod/update",
-		ModPackModUpdateHandler,
+		RequireAdmin(ModPackModUpdateHandler),
 		false,
 	}, {
 		"ModPackUploadMod",
 		"POST",
 		"/mods/packs/{modpack}/mod/upload",
-		ModPackModUploadHandler,
+		RequireAdmin(ModPackModUploadHandler),
 		false,
 	}, {
 		"ModPackModPortalInstallMod",
 		"POST",
 		"/mods/packs/{modpack}/portal/install",
-		ModPackModPortalInstallHandler,
+		RequireAdmin(ModPackModPortalInstallHandler),
 		false,
 	}, {
 		"ModPackModPortalInstallMultiple",
 		"POST",
 		"/mods/packs/{modpack}/portal/install/multiple",
-		ModPackModPortalInstallMultipleHandler,
+		RequireAdmin(ModPackModPortalInstallMultipleHandler),
+		true,
+	},
+	// Companion dashboards — read-only, one endpoint per page so a page only
+	// pays for the slice it is showing.
+	{
+		"CompanionOverview",
+		"GET",
+		"/companion/overview",
+		CompanionOverviewHandler,
+		false,
+	}, {
+		"CompanionProduction",
+		"GET",
+		"/companion/production",
+		CompanionProductionHandler,
+		false,
+	}, {
+		"CompanionPower",
+		"GET",
+		"/companion/power",
+		CompanionPowerHandler,
+		false,
+	}, {
+		"CompanionScience",
+		"GET",
+		"/companion/science",
+		CompanionScienceHandler,
+		false,
+	}, {
+		"CompanionGraph",
+		"GET",
+		"/companion/graph",
+		CompanionGraphHandler,
+		false,
+	}, {
+		"CompanionSpeed",
+		"POST",
+		"/companion/speed",
+		RequireAdmin(CompanionSpeedHandler),
 		false,
 	},
 }

@@ -15,6 +15,10 @@ import ServerSettings from "./views/ServerSettings";
 import GameSettings from "./views/GameSettings";
 import Console from "./views/Console";
 import Help from "./views/Help";
+import Credentials from "./views/Credentials";
+import DashboardPower from "./views/Dashboard/Power";
+import DashboardProduction from "./views/Dashboard/Production";
+import DashboardScience from "./views/Dashboard/Science";
 import socket from "../api/socket";
 import {Flash} from "./components/Flash";
 
@@ -22,10 +26,12 @@ import {Flash} from "./components/Flash";
 const App = () => {
 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
     const [serverStatus, setServerStatus] = useState(null);
 
-    const handleAuthenticationStatus = useCallback(async (status) => {
-        if (status?.username) {
+    const handleAuthenticationStatus = useCallback(async (user) => {
+        if (user?.username) {
+            setCurrentUser(user);
             setIsAuthenticated(true);
 
             const status = await server.status();
@@ -42,12 +48,22 @@ const App = () => {
         const loggedOut = await user.logout();
         if (loggedOut) {
             setIsAuthenticated(false);
+            setCurrentUser(null);
         }
     }, []);
 
     const ProtectedRoute = ({isAuthenticated}) => {
         if (!isAuthenticated) {
             return <Navigate to="/login" state={{from: window.location.pathname}} />;
+        }
+        return <Outlet/>;
+    }
+
+    // Everything under this route is admin-only. A user-role account is sent to
+    // the dashboard, the widest page it may see, rather than shown a dead link.
+    const AdminRoute = ({currentUser}) => {
+        if (currentUser?.role !== 'admin') {
+            return <Navigate to="/dashboard" replace/>;
         }
         return <Outlet/>;
     }
@@ -59,16 +75,26 @@ const App = () => {
 
                 {/* route with only `element` will cause the proper children to be place in `<Outlet/>` */}
                 <Route element={<ProtectedRoute isAuthenticated={isAuthenticated}/> }>
-                    <Route element={<Layout handleLogout={handleLogout} serverStatus={serverStatus} />}>
-                        <Route index element={<Controls serverStatus={serverStatus}/>}/>
-                        <Route path="saves" element={<Saves serverStatus={serverStatus}/>}/>
-                        <Route path="mods" element={<Mods serverStatus={serverStatus}/>}/>
-                        <Route path="server-settings" element={<ServerSettings serverStatus={serverStatus}/>}/>
-                        <Route path="game-settings" element={<GameSettings serverStatus={serverStatus}/>}/>
+                    <Route element={<Layout handleLogout={handleLogout} serverStatus={serverStatus} currentUser={currentUser} />}>
+                        {/* Read-only for the `user` role: console, mods, dashboards, help */}
+                        <Route path="mods" element={<Mods serverStatus={serverStatus} currentUser={currentUser}/>}/>
                         <Route path="console" element={<Console serverStatus={serverStatus}/>}/>
-                        <Route path="logs" element={<Logs serverStatus={serverStatus}/>}/>
-                        <Route path="user-management" element={<UserManagement serverStatus={serverStatus}/>}/>
+                        <Route path="dashboard" element={<Navigate to="/dashboard-power" replace/>}/>
+                        <Route path="dashboard-power" element={<DashboardPower/>}/>
+                        <Route path="dashboard-production" element={<DashboardProduction/>}/>
+                        <Route path="dashboard-science" element={<DashboardScience/>}/>
                         <Route path="help" element={<Help serverStatus={serverStatus}/>}/>
+
+                        {/* Admin only */}
+                        <Route element={<AdminRoute currentUser={currentUser}/>}>
+                            <Route index element={<Controls serverStatus={serverStatus}/>}/>
+                            <Route path="saves" element={<Saves serverStatus={serverStatus}/>}/>
+                            <Route path="server-settings" element={<ServerSettings serverStatus={serverStatus}/>}/>
+                            <Route path="game-settings" element={<GameSettings serverStatus={serverStatus}/>}/>
+                            <Route path="logs" element={<Logs serverStatus={serverStatus}/>}/>
+                            <Route path="user-management" element={<UserManagement serverStatus={serverStatus}/>}/>
+                            <Route path="credentials" element={<Credentials serverStatus={serverStatus}/>}/>
+                        </Route>
                     </Route>
                 </Route>
             </Routes>

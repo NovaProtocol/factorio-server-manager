@@ -49,3 +49,41 @@ html {
 .hover\:glow-red:hover {
   box-shadow: 0 0 3px 1px rgba(254, 90, 90, 0.8);
 }
+
+/* A themed scrollbar rather than the browser default: a recessed track with the
+   same inner shadow as the panels, and a bevelled thumb built from the same
+   accent borders as everything else, lighting up orange on hover.
+
+   `scrollbar-width` is deliberately NOT set. Chrome ignores ::-webkit-scrollbar
+   for an element whose `scrollbar-width` is not `auto`, which would throw away
+   the bevelled thumb below in favour of its own thin bar. `scrollbar-color` alone
+   is enough for Firefox, which has no ::-webkit-scrollbar. */
+.fsm-scroll {
+  scrollbar-color: #8E8E8E #1C1C1C;
+}
+
+.fsm-scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.fsm-scroll::-webkit-scrollbar-track {
+  background: #1C1C1C;
+  box-shadow: inset 0 0 4px 0 rgba(0, 0, 0, 0.9);
+}
+
+.fsm-scroll::-webkit-scrollbar-thumb {
+  background: #8E8E8E;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  border-left: 2px solid rgba(255, 255, 255, 0.1);
+  border-right: 2px solid rgba(0, 0, 0, 0.2);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+.fsm-scroll::-webkit-scrollbar-thumb:hover {
+  background: #E39827;
+}
+
+.fsm-scroll::-webkit-scrollbar-corner {
+  background: #1C1C1C;
+}

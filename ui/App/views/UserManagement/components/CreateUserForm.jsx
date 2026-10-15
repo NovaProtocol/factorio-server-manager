@@ -4,10 +4,17 @@ import user from "../../../../api/resources/user";
 import Button from "../../../components/Button";
 import Label from "../../../components/Label";
 import Input from "../../../components/Input";
+import Select from "../../../components/Select";
 import Error from "../../../components/Error";
 
+// `user` is the least-privilege role and therefore the default: it can read the
+// console, the mod list, the dashboard and the help page, nothing else.
+const ROLE_OPTIONS = [
+    {value: 'user', name: 'User (read-only)'},
+    {value: 'admin', name: 'Admin'},
+];
+
 const CreateUserForm = ({updateUserList}) => {
-    const roleValue = "admin";
 
     const {
         register,
@@ -15,8 +22,8 @@ const CreateUserForm = ({updateUserList}) => {
         formState: {errors},
         watch
     } = useForm({
-        values: {
-            role: roleValue,
+        defaultValues: {
+            role: 'user',
         }
     });
     const password = watch('password');
@@ -40,10 +47,9 @@ const CreateUserForm = ({updateUserList}) => {
             </div>
             <div className="mb-4">
                 <Label htmlFor="role" text="Role"/>
-                <Input register={register('role', {required: true})}
-                       value={roleValue}
-                       disabled={true}
-                       placeholder="Role"
+                <Select register={register('role', {required: true})}
+                        defaultValue="user"
+                        options={ROLE_OPTIONS}
                 />
                 <Error error={errors.role} message="Role is required"/>
             </div>

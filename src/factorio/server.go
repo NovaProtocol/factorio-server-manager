@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/api/websocket"
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
@@ -27,6 +29,8 @@ type Server struct {
 	BindIP         string                 `json:"bindip"`
 	Port           int                    `json:"port"`
 	Running        bool                   `json:"running"`
+	Ups            float64                `json:"ups"`
+	GameSpeed      float64                `json:"game_speed"`
 	Version        Version                `json:"fac_version"`
 	BaseModVersion string                 `json:"base_mod_version"`
 	StdOut         io.ReadCloser          `json:"-"`
@@ -39,6 +43,90 @@ type Server struct {
 
 var instantiated Server
 var once sync.Once
+var upsSamplerOnce sync.Once
+
+const upsSampleInterval = 5 * time.Second
+
+// startUpsSampler watches the game's tick against wall-clock time, so the status
+// pill can report the update rate the server is actually achieving. It is one
+// small RCON command every 5s while a game runs; with no game the sampler does
+// nothing beyond the boolean check. Reads run under rconMutex like every other
+// RCON caller, so they never interleave with dashboard fetches.
+func startUpsSampler() {
+	upsSamplerOnce.Do(func() {
+		go func() {
+			var lastTick uint64
+			var lastAt time.Time
+			for {
+				time.Sleep(upsSampleInterval)
+
+				if !instantiated.GetRunning() || instantiated.Rcon == nil {
+					lastAt = time.Time{}
+					if instantiated.Ups != 0 {
+						instantiated.Ups = 0
+						broadcastServerStatus(&instantiated)
+					}
+					continue
+				}
+
+				tick, speed, ok := readGameStatus()
+				if !ok {
+					lastAt = time.Time{}
+					if instantiated.Ups != 0 {
+						instantiated.Ups = 0
+						broadcastServerStatus(&instantiated)
+					}
+					continue
+				}
+
+				// The speed rides with the tick sample, so the speed panel's
+				// live figure is never a separate query.
+				instantiated.GameSpeed = speed
+
+				now := time.Now()
+				// A restart resets the tick, which would measure a negative or
+				// enormous rate; those samples restart the series instead.
+				fresh := lastAt.IsZero() || tick < lastTick
+				if !fresh {
+					seconds := now.Sub(lastAt).Seconds()
+					if seconds > 0.5 {
+						instantiated.Ups = math.Round(float64(tick-lastTick)/seconds*10) / 10
+						broadcastServerStatus(&instantiated)
+					}
+				}
+				lastTick = tick
+				lastAt = now
+			}
+		}()
+	})
+}
+
+// readGameTick asks the companion mod for the game tick and its current speed:
+// game.speed travels with the tick, since the status pill and the speed panel
+// both want it. It is the `/companion-tick` command, a plain mod command and not
+// a script command — the only game calls that never stop achievements.
+func readGameStatus() (tick uint64, speed float64, ok bool) {
+	response, err := runCompanionCommand("/companion-tick")
+	if err != nil {
+		return 0, 0, false
+	}
+
+	var payload struct {
+		Tick  uint64  `json:"tick"`
+		Speed float64 `json:"speed"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(response)), &payload); err != nil {
+		return 0, 0, false
+	}
+
+	return payload.Tick, payload.Speed, true
+}
+
+func broadcastServerStatus(server *Server) {
+	wsRoom := websocket.WebsocketHub.GetRoom("server_status")
+	response, _ := json.Marshal(server)
+	wsRoom.Send(string(response))
+}
 
 func (server *Server) SetRunning(newState bool) {
 	if server.Running != newState {
@@ -208,6 +296,10 @@ func NewFactorioServer() (err error) {
 	}
 
 	SetFactorioServer(server)
+
+	// The status pill carries the update rate, so the sampler starts with the
+	// manager itself and stays out of the way while no game is running.
+	startUpsSampler()
 
 	// autostart factorio is configured to do so
 	if config.Autostart == "true" {

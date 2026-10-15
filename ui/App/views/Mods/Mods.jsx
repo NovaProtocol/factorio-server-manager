@@ -11,7 +11,11 @@ import CompanionMod from "./components/CompanionMod";
 
 const COMPANION_MOD_NAME = 'fsm-companion';
 
-const Mods = ({serverStatus}) => {
+const Mods = ({serverStatus, currentUser}) => {
+
+    // The `user` role may read the mod list but not change it. Mutating controls
+    // are hidden and the API refuses them anyway.
+    const readOnly = currentUser?.role !== 'admin';
 
     const [installedMods, setInstalledMods] = useState([]);
     const [modPacks, setModPacks] = useState([])
@@ -83,6 +87,9 @@ const Mods = ({serverStatus}) => {
     }
 
     let disabled = serverStatus.running
+    // Reading is still allowed while the server runs or for a read-only account;
+    // only the controls that change something are taken away.
+    let controlsDisabled = disabled || readOnly
 
     // The companion is the manager's own mod: it gets its own panel instead of a
     // row in the list, so it is not offered for update or delete like a normal mod.
@@ -100,6 +107,7 @@ const Mods = ({serverStatus}) => {
                        }
                 />
                 :
+                !readOnly &&
                 <Panel
                     title="Upload Mods"
                     className="mb-6"
@@ -116,13 +124,13 @@ const Mods = ({serverStatus}) => {
                              deleteMod={deleteMod}
                              mods={listedMods}
                              factorioVersion={factorioVersion}
-                             disabled={disabled}
+                             disabled={controlsDisabled}
                     />
                 }
                 actions={
                     <>
                         {
-                            !disabled &&
+                            !controlsDisabled &&
                             <Button size="sm" className="mr-2" type="danger" isLoading={isDeletingAllMods}
                                     onClick={deleteAllMods}>Delete all Mods</Button> &&
                             <Button size="sm" className="mr-2" isLoading={isUpdatingAllMods}
@@ -137,7 +145,9 @@ const Mods = ({serverStatus}) => {
             <CompanionMod
                 companion={companionMod}
                 serverRunning={disabled}
+                readOnly={readOnly}
                 onToggle={toggleMod}
+                onInstalled={fetchInstalledMods}
             />
 
             <Panel
@@ -152,11 +162,12 @@ const Mods = ({serverStatus}) => {
                                      reloadMods={fetchInstalledMods}
                                      reloadModPacks={fetchModPacks}
                                      disabled={disabled}
+                                     readOnly={readOnly}
                             />
                     )
                 }
                 actions={
-                    <CreateModPack onSuccess={fetchModPacks}/>
+                    !readOnly && <CreateModPack onSuccess={fetchModPacks}/>
                 }
             />
         </div>

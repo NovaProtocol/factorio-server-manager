@@ -51,7 +51,3 @@ clean:
 	@-rm -rf node_modules/
 	@-rm -r pkg/
 	@-rm -r factorio-server-manager
-
-# Refresh the embedded companion mod from ../companion-mod before building.
-sync-companion:
-	@sh scripts/sync-companion.sh

@@ -38,6 +38,40 @@ func CompanionDownloadHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, path)
 }
 
+// CompanionStatusHandler reports the pinned companion version, whether that
+// version is installed, where it came from, and why it is missing.
+func CompanionStatusHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	WriteResponse(w, companion.CurrentStatus())
+}
+
+// CompanionInstallHandler fetches the pinned companion version on demand, for
+// the Mods page's "Fetch now" action: the GitHub release first, the mod portal
+// as the fallback. The status it returns is the same shape as the status
+// endpoint, so the page renders the outcome either way.
+func CompanionInstallHandler(w http.ResponseWriter, r *http.Request) {
+	var resp interface{}
+
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	status, err := companion.Install()
+	if err != nil {
+		// 503, not 502: the client treats 502 as "the proxy is down" and shows a
+		// generic message, which would hide why the fetch failed.
+		resp = fmt.Sprintf("Error fetching the companion mod: %s", err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+
+	resp = status
+}
+
 func CreateNewMods(w http.ResponseWriter) (modList factorio.Mods, resp interface{}, err error) {
 	config := bootstrap.GetConfig()
 	modList, err = factorio.NewMods(config.FactorioModsDir)
@@ -378,7 +412,7 @@ func LoadModsFromSaveHandler(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 
 	var header factorio.SaveHeader
-	err = header.ReadFrom(f)
+	err = header.ReadHeader(f)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		resp = fmt.Sprintf("cannot read save header: %v", err)

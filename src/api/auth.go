@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"log"
@@ -12,6 +13,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+type contextKey string
+
+// authenticatedUserKey carries the resolved user from AuthMiddleware to the
+// handler, so a role check does not have to read the session and the database a
+// second time.
+const authenticatedUserKey contextKey = "authenticatedUser"
 
 type User bootstrap.User
 
@@ -38,6 +46,10 @@ func SetupAuth() {
 	sessionStore.Options = &sessions.Options{
 		Path:   "/",
 		Secure: config.Secure,
+		// Stated rather than left to the browser default: a cross-site request
+		// must not carry the session, and this is the only guard on top of the
+		// routes that change server state.
+		SameSite: http.SameSiteLaxMode,
 	}
 
 	auth.db, err = gorm.Open(sqlite.Open(config.SQLiteDatabaseFile), nil)
@@ -262,18 +274,40 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		hasUser, err := auth.hasUser(username.(string))
+		// The user is loaded on every request rather than trusted from the
+		// cookie, so a role change or a deleted account takes effect at once.
+		user, err := auth.getUser(username.(string))
 		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				log.Printf("Unauthenticated request %s %s %s", r.Method, r.Host, r.RequestURI)
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		if hasUser {
-			next.ServeHTTP(w, r)
-		} else {
-			log.Printf("Unauthenticated request %s %s %s", r.Method, r.Host, r.RequestURI)
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), authenticatedUserKey, user)))
+	})
+}
+
+// currentUser returns the user AuthMiddleware resolved for this request.
+func currentUser(r *http.Request) (User, bool) {
+	user, ok := r.Context().Value(authenticatedUserKey).(User)
+	return user, ok
+}
+
+// RequireAdmin gates a route on the admin role. It assumes AuthMiddleware has
+// already run, so a request from a non-admin is answered with 403 rather than a
+// login redirect.
+func RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		user, ok := currentUser(r)
+		if !ok || user.Role != "admin" {
+			http.Error(w, "forbidden: this action requires the admin role", http.StatusForbidden)
 			return
 		}
-	})
+
+		next(w, r)
+	}
 }

@@ -81,7 +81,7 @@ type Mod struct {
 }
 
 // Mostly based on https://forums.factorio.com/viewtopic.php?f=5&t=8568&p=277892&hilit=level.dat+python#p277892
-func (h *SaveHeader) ReadFrom(r io.Reader) (err error) {
+func (h *SaveHeader) ReadHeader(r io.Reader) (err error) {
 	var scratch [8]byte
 
 	var fv version64
@@ -178,7 +178,7 @@ func (h *SaveHeader) ReadFrom(r io.Reader) (err error) {
 	}
 
 	var loadedFrom version48
-	err = loadedFrom.ReadFrom(r, Version(h.FactorioVersion))
+	err = loadedFrom.readVersion(r, Version(h.FactorioVersion))
 	if err != nil {
 		return fmt.Errorf("read LoadedFrom: %v", err)
 	}
@@ -245,7 +245,7 @@ func (h *SaveHeader) ReadFrom(r io.Reader) (err error) {
 
 	for i := uint32(0); i < n; i++ {
 		var m Mod
-		if err = (&m).ReadFrom(r, Version(h.FactorioVersion)); err != nil {
+		if err = (&m).readMod(r, Version(h.FactorioVersion)); err != nil {
 			return fmt.Errorf("read mod: %v", err)
 		}
 		h.Mods = append(h.Mods, m)
@@ -354,14 +354,14 @@ func (h *SaveHeader) readStats(r io.Reader) (stats map[byte][]map[uint16]uint32,
 	return stats, nil
 }
 
-func (m *Mod) ReadFrom(r io.Reader, game Version) (err error) {
+func (m *Mod) readMod(r io.Reader, game Version) (err error) {
 	m.Name, err = readString(r, game, true)
 	if err != nil {
 		return fmt.Errorf("read Name: %v", err)
 	}
 
 	var version version48
-	err = version.ReadFrom(r, game)
+	err = version.readVersion(r, game)
 	if err != nil {
 		return err
 	}
