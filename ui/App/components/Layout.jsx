@@ -5,6 +5,47 @@ import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faBars} from "@fortawesome/free-solid-svg-icons";
 import {Flash} from "./Flash";
 
+// Status and Link live at module scope for the same reason the route guards in
+// App do: a component defined inside a component is a new type on every render,
+// so React remounts it instead of updating it. The sidebar re-renders every five
+// seconds (the status pill carries the live UPS), and remounting a NavLink on
+// every tick is pure churn.
+const Status = ({info}) => {
+
+    let text = 'Unknown';
+    let color = 'gray-light';
+
+    if (info && info.running) {
+        text = 'Running';
+        color = 'green';
+        if (info.ups !== undefined) {
+            text = `Running - ${info.ups.toFixed(1)} UPS`;
+        }
+    } else if (info && !info.running) {
+        text = 'Stopped';
+        color = 'red';
+    }
+
+    return (
+        <div className={`bg-${color} accentuated rounded px-2 py-1 text-black`}>{text}</div>
+    )
+}
+
+const Link = ({children, to, last, onNavigate}) => {
+    return (
+        <NavLink
+            onClick={onNavigate}
+            end
+            to={to}
+            className={({isActive}) => {
+                return [
+                    isActive ? "bg-orange" : "",
+                    `hover:glow-orange accentuated bg-gray-light hover:bg-orange text-black font-bold py-2 px-4 w-full block${last ? '' : ' mb-1'}`,
+                ].join(" ")
+            }}
+        >{children}</NavLink>)
+}
+
 const Layout = ({handleLogout, serverStatus, currentUser}) => {
 
     const [isNavCollapsed, setIsNavCollapsed] = useState(true);
@@ -12,42 +53,7 @@ const Layout = ({handleLogout, serverStatus, currentUser}) => {
     // The `user` role is read-only: it gets the console, the mod list, the
     // dashboard and the help page, and nothing that changes the server.
     const isAdmin = currentUser?.role === 'admin';
-
-    const Status = ({info}) => {
-
-        let text = 'Unknown';
-        let color = 'gray-light';
-
-        if (info && info.running) {
-            text = 'Running';
-            color = 'green';
-            if (info.ups !== undefined) {
-                text = `Running - ${info.ups.toFixed(1)} UPS`;
-            }
-        } else if (info && !info.running) {
-            text = 'Stopped';
-            color = 'red';
-        }
-
-        return (
-            <div className={`bg-${color} accentuated rounded px-2 py-1 text-black`}>{text}</div>
-        )
-    }
-
-    const Link = ({children, to, last}) => {
-        return (
-            <NavLink
-                onClick={() => setIsNavCollapsed(true)}
-                end
-                to={to}
-                className={({isActive}) => {
-                    return [
-                        isActive ? "bg-orange" : "",
-                        `hover:glow-orange accentuated bg-gray-light hover:bg-orange text-black font-bold py-2 px-4 w-full block${last ? '' : ' mb-1'}`,
-                    ].join(" ")
-                }}
-            >{children}</NavLink>)
-    }
+    const collapseNav = () => setIsNavCollapsed(true);
 
     return (
         <>
@@ -74,29 +80,29 @@ const Layout = ({handleLogout, serverStatus, currentUser}) => {
                     <div className="py-4 px-2 accentuated">
                         <h1 className="text-dirty-white text-lg mb-2 mx-4">Server Management</h1>
                         <div className="text-white text-center rounded-sm bg-black shadow-inner mx-4 p-1">
-                            {isAdmin && <Link to="/">Controls</Link>}
-                            {isAdmin && <Link to="/saves">Saves</Link>}
-                            <Link to="/mods">Mods</Link>
-                            {isAdmin && <Link to="/server-settings">Server Settings</Link>}
-                            {isAdmin && <Link to="/game-settings">Game Settings</Link>}
-                            <Link to="/console" last={!isAdmin}>Console</Link>
-                            {isAdmin && <Link to="/logs" last={true}>Logs</Link>}
+                            {isAdmin && <Link onNavigate={collapseNav} to="/">Controls</Link>}
+                            {isAdmin && <Link onNavigate={collapseNav} to="/saves">Saves</Link>}
+                            <Link onNavigate={collapseNav} to="/mods">Mods</Link>
+                            {isAdmin && <Link onNavigate={collapseNav} to="/server-settings">Server Settings</Link>}
+                            {isAdmin && <Link onNavigate={collapseNav} to="/game-settings">Game Settings</Link>}
+                            <Link onNavigate={collapseNav} to="/console" last={!isAdmin}>Console</Link>
+                            {isAdmin && <Link onNavigate={collapseNav} to="/logs" last={true}>Logs</Link>}
                         </div>
                     </div>
                     <div className="py-4 px-2 accentuated">
                         <h1 className="text-dirty-white text-lg mb-2 mx-4">Game</h1>
                         <div className="text-white text-center rounded-sm bg-black shadow-inner mx-4 p-1">
-                            <Link to="/dashboard-power">Power</Link>
-                            <Link to="/dashboard-production">Production</Link>
-                            <Link to="/dashboard-science" last={true}>Science</Link>
+                            <Link onNavigate={collapseNav} to="/dashboard-power">Power</Link>
+                            <Link onNavigate={collapseNav} to="/dashboard-production">Production</Link>
+                            <Link onNavigate={collapseNav} to="/dashboard-science" last={true}>Science</Link>
                         </div>
                     </div>
                     <div className="py-4 px-2 accentuated">
                         <h1 className="text-dirty-white text-lg mb-2 mx-4">FSM Administration</h1>
                         <div className="text-white text-center rounded-sm bg-black shadow-inner mx-4 p-1">
-                            {isAdmin && <Link to="/user-management">Users</Link>}
-                            {isAdmin && <Link to="/credentials">Credentials</Link>}
-                            <Link to="/help" last={true}>Help</Link>
+                            {isAdmin && <Link onNavigate={collapseNav} to="/user-management">Users</Link>}
+                            {isAdmin && <Link onNavigate={collapseNav} to="/credentials">Credentials</Link>}
+                            <Link onNavigate={collapseNav} to="/help" last={true}>Help</Link>
                         </div>
                     </div>
                     <div className="py-4 px-2 accentuated">

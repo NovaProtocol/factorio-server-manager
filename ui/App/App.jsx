@@ -23,6 +23,27 @@ import socket from "../api/socket";
 import {Flash} from "./components/Flash";
 
 
+// Both guards live at module scope on purpose. Declared inside App they would be
+// a new component type on every render, and React would unmount and remount the
+// whole route subtree — which refetches every page's data and throws away its
+// state whenever the status broadcast arrives (it ticks every 5 seconds for the
+// UPS readout).
+const ProtectedRoute = ({isAuthenticated}) => {
+    if (!isAuthenticated) {
+        return <Navigate to="/login" state={{from: window.location.pathname}}/>;
+    }
+    return <Outlet/>;
+}
+
+// Everything under this route is admin-only. A user-role account is sent to the
+// dashboard, the widest page it may see, rather than shown a dead link.
+const AdminRoute = ({currentUser}) => {
+    if (currentUser?.role !== 'admin') {
+        return <Navigate to="/dashboard" replace/>;
+    }
+    return <Outlet/>;
+}
+
 const App = () => {
 
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -51,22 +72,6 @@ const App = () => {
             setCurrentUser(null);
         }
     }, []);
-
-    const ProtectedRoute = ({isAuthenticated}) => {
-        if (!isAuthenticated) {
-            return <Navigate to="/login" state={{from: window.location.pathname}} />;
-        }
-        return <Outlet/>;
-    }
-
-    // Everything under this route is admin-only. A user-role account is sent to
-    // the dashboard, the widest page it may see, rather than shown a dead link.
-    const AdminRoute = ({currentUser}) => {
-        if (currentUser?.role !== 'admin') {
-            return <Navigate to="/dashboard" replace/>;
-        }
-        return <Outlet/>;
-    }
 
     return (
         <BrowserRouter>

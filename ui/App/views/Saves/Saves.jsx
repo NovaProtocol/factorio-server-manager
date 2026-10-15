@@ -6,6 +6,22 @@ import UploadSaveForm from "./components/UploadSaveForm";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {faDownload, faSort, faSortDown, faSortUp, faTrashAlt} from "@fortawesome/free-solid-svg-icons";
 
+// Module scope, like every other component: declared inside Saves it would be a
+// new type on each render of the page.
+const SortHeader = ({column, sort, onSort, children}) => {
+    const active = sort.column === column;
+    const icon = !active ? faSort : (sort.ascending ? faSortUp : faSortDown);
+
+    return (
+        <th className={`pr-4 cursor-pointer select-none hover:text-orange ${active ? 'text-orange' : ''}`}
+            onClick={() => onSort(column)}
+            aria-sort={active ? (sort.ascending ? 'ascending' : 'descending') : 'none'}>
+            {children}
+            <FontAwesomeIcon className="ml-2 text-gray-light" icon={icon}/>
+        </th>
+    );
+};
+
 const Saves = ({serverStatus}) => {
 
     const [saves, setSaves] = useState([]);
@@ -68,20 +84,6 @@ const Saves = ({serverStatus}) => {
         });
     }, [saves, sort]);
 
-    const SortHeader = ({column, children}) => {
-        const active = sort.column === column;
-        const icon = !active ? faSort : (sort.ascending ? faSortUp : faSortDown);
-
-        return (
-            <th className={`pr-4 cursor-pointer select-none hover:text-orange ${active ? 'text-orange' : ''}`}
-                onClick={() => clickSort(column)}
-                aria-sort={active ? (sort.ascending ? 'ascending' : 'descending') : 'none'}>
-                {children}
-                <FontAwesomeIcon className="ml-2 text-gray-light" icon={icon}/>
-            </th>
-        );
-    };
-
     const deleteSave = async (save) => {
         const res = await savesResource.delete(save);
         if (res) {
@@ -141,15 +143,15 @@ const Saves = ({serverStatus}) => {
                         <table className="w-full">
                             <thead>
                             <tr className="text-left py-1">
-                                <SortHeader column="name">Name</SortHeader>
+                                <SortHeader column="name" sort={sort} onSort={clickSort}>Name</SortHeader>
                                 <th className="pr-4">
                                     Factorio Version
                                     {/* no sorting here: the version comes from a
                                         header read that arrives after the list, so
                                         rows would reorder under the cursor */}
                                 </th>
-                                <SortHeader column="last_mod">Last Modified At</SortHeader>
-                                <SortHeader column="size">Size</SortHeader>
+                                <SortHeader column="last_mod" sort={sort} onSort={clickSort}>Last Modified At</SortHeader>
+                                <SortHeader column="size" sort={sort} onSort={clickSort}>Size</SortHeader>
                                 <th>Actions</th>
                             </tr>
                             </thead>
