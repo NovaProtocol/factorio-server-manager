@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `conf.json` (admin and RCON passwords in clear) is `chmod 0600` on every start, and `factorio.auth` (the mod portal token) is written `0600`
 
 ### Fixed
+- Adding a user whose name already exists is refused with `400` and "User <name> already exists" instead of quietly creating a second account, and startup warns when the database already holds duplicate names — the username's unique index cannot be created while they are there
 - `go vet` is clean: `lockfile.NewLock` returns a pointer instead of copying a mutex, and the three save/version readers no longer shadow the `io.ReaderFrom` contract with a mismatched signature
 - Removed the unused `fuse.js` dependency; the lockfile is back in sync with `package.json`
 - Every compose file caps the container log at 10 MB × 3 files and carries a healthcheck, instead of leaving the docker log unbounded

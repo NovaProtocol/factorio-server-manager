@@ -888,6 +888,12 @@ func AddUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = auth.addUser(user)
+	if errors.Is(err, ErrUserExists) {
+		resp = fmt.Sprintf("User %s already exists", user.Username)
+		log.Println(resp)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	if err != nil {
 		resp = fmt.Sprintf("Error in adding user {%s}: %s", user.Username, err)
 		log.Println(resp)

@@ -64,6 +64,8 @@ func SetupAuth() {
 		panic(err)
 	}
 
+	auth.reportDuplicateUsernames()
+
 	// The admin credentials are configuration, not state: they are re-applied on
 	// every start so the account cannot drift from what the operator configured.
 	if err := auth.ensureConfiguredAdmin(config.Username, config.Password); err != nil {
@@ -196,7 +198,47 @@ func (a *Auth) listUsers() ([]User, error) {
 	return users, nil
 }
 
+// reportDuplicateUsernames says out loud what the schema cannot enforce: once a
+// database holds two accounts under one name the unique index cannot be created,
+// and the operator deserves to know before wondering why a name is listed twice.
+func (a *Auth) reportDuplicateUsernames() {
+	var duplicates []struct {
+		Username string
+		Total    int64
+	}
+
+	if err := a.db.Model(&User{}).
+		Select("username, count(*) as total").
+		Group("username").
+		Having("count(*) > 1").
+		Scan(&duplicates).Error; err != nil {
+		log.Printf("Could not check for duplicate usernames: %s", err)
+		return
+	}
+
+	for _, duplicate := range duplicates {
+		log.Printf("Warning: %d accounts are named %q; remove the extras to let the username index be created",
+			duplicate.Total, duplicate.Username)
+	}
+}
+
+// ErrUserExists is what a second account with the same name gets, instead of a
+// silent duplicate row. The username column carries a unique index in the model,
+// but a database that already holds duplicates cannot have it created, so the
+// check has to be here too — a duplicate account is a confusing thing to hand an
+// operator, whatever the schema says.
+var ErrUserExists = errors.New("a user with this name already exists")
+
 func (a *Auth) addUser(user User) error {
+	var existing int64
+	if result := a.db.Model(&User{}).Where(&User{Username: user.Username}).Count(&existing); result.Error != nil {
+		log.Printf("Error checking for an existing user: %s", result.Error)
+		return result.Error
+	}
+	if existing > 0 {
+		return ErrUserExists
+	}
+
 	// encrypt password
 	pwHash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
