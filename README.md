@@ -75,9 +75,11 @@ Consequences worth knowing:
 - The mod source lives in the `companion-mod` repository, which is its own repo and
   no longer copied into this one.
 
-The mod's own releases are published by `../mod_upload.py`, which now attaches the
-built zip to a GitHub release and, unless told otherwise, also uploads it to the
-mod portal.
+The mod's own releases are published by `../companion-mod-output/mod_upload.py`,
+which attaches the built zip to a GitHub release and, unless told otherwise, also
+uploads it to the mod portal. That directory holds the script, its
+`mod_upload.json` state (mod source, output directory, version) and the zips it has
+built.
 
 ## Dashboards
 
