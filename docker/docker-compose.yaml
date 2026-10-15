@@ -1,7 +1,12 @@
 version: "3"
 services:
   factorio-server-manager:
-    image: "ofsm/ofsm:latest"
+    # Built from this repository, not pulled: ofsm/ofsm is upstream and has none
+    # of this fork's features. Run `docker compose -f docker/docker-compose.yaml build`.
+    image: "factorio-manager"
+    build:
+      context: ..
+      dockerfile: Dockerfile
     container_name: "factorio-server-manager"
     restart: "unless-stopped"
     environment:
@@ -16,6 +21,18 @@ services:
       - "./factorio-data/mods:/opt/factorio/mods"
       - "./factorio-data/config:/opt/factorio/config"
       - "./factorio-data/mod_packs:/opt/fsm/mod_packs"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      # The manager answers on port 80 inside the container; the first start
+      # downloads Factorio, which takes a while, hence the long start period.
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
     labels:
       - "traefik.enable=true"
 

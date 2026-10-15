@@ -61,8 +61,19 @@ init_config() {
        | .cookie_encryption_key = $cookie
        | .secure = $secure
        | .sq_lite_database_file = "/opt/fsm-data/sqlite.db"
+       | .factorio_credentials_file = "/opt/fsm-data/factorio.auth"
        | .log_file = "/opt/fsm-data/factorio-server-manager.log"' \
-      /opt/fsm/conf.json >/opt/fsm-data/conf.json
+       /opt/fsm/conf.json >/opt/fsm-data/conf.json
+
+    # conf.json carries the admin password and the RCON password in clear, so it
+    # is readable by the manager's account only. The token file and the user
+    # database next to it hold secrets of their own and get the same treatment.
+    chmod 600 /opt/fsm-data/conf.json
+    for secret in factorio.auth sqlite.db; do
+        if [ -f "/opt/fsm-data/$secret" ]; then
+            chmod 600 "/opt/fsm-data/$secret"
+        fi
+    done
 
     echo "Admin user is '$ADMIN_USER'"
     echo "Session cookie secure flag: $secure"

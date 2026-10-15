@@ -22,3 +22,16 @@ services:
     volumes:
       - ./fsm-data:/opt/fsm-data
       - ./factorio:/opt/factorio
+
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      # The manager answers on port 80 inside the container; the first start
+      # downloads Factorio, which takes a while, hence the long start period.
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:80/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 180s
