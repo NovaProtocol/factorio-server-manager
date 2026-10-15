@@ -8,8 +8,10 @@ services:
     restart: unless-stopped
 
     ports:
-      - "34197:34197/udp"
-      - "127.0.0.1:7090:80"
+      # FSM_WEB_BIND/FSM_WEB_PORT decide where the interface answers; the game port
+      # is its own variable so a second installation can sit beside the first.
+      - "${FSM_GAME_PORT:-34197}:34197/udp"
+      - "${FSM_WEB_BIND:-127.0.0.1}:${FSM_WEB_PORT:-7090}:80"
 
     environment:
       FACTORIO_VERSION: ${FACTORIO_VERSION:-2.1.21}
@@ -18,10 +20,23 @@ services:
       ADMIN_PASS: ${ADMIN_PASS:?ADMIN_PASS is required}
       RCON_PASS: ${RCON_PASS:?RCON_PASS is required}
       COOKIE_ENCRYPTION_KEY: ${COOKIE_ENCRYPTION_KEY:?COOKIE_ENCRYPTION_KEY is required}
+      # Optional: overrides for the published ports (FSM_WEB_BIND, FSM_WEB_PORT,
+      # FSM_GAME_PORT), and for where the data lives (FSM_DATA_DIR, FACTORIO_DIR).
+      # COOKIE_SECURE=false is what makes login stick over plain HTTP.
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      FSM_AUTOSTART: ${FSM_AUTOSTART:-false}
 
     volumes:
-      - ./fsm-data:/opt/fsm-data
-      - ./factorio:/opt/factorio
+      # FSM_DATA_DIR and FACTORIO_DIR point at an existing installation to upgrade
+      # it in place: the manager's state, the saves, the mods and the settings are
+      # then the ones already there. Every subpath of FACTORIO_DIR that the image
+      # declares as a VOLUME is bound explicitly, otherwise Docker creates
+      # anonymous volumes that shadow the parent bind.
+      - ${FSM_DATA_DIR:-./fsm-data}:/opt/fsm-data
+      - ${FACTORIO_DIR:-./factorio}:/opt/factorio
+      - ${FACTORIO_DIR:-./factorio}/saves:/opt/factorio/saves
+      - ${FACTORIO_DIR:-./factorio}/mods:/opt/factorio/mods
+      - ${FACTORIO_DIR:-./factorio}/config:/opt/factorio/config
 
     logging:
       options:

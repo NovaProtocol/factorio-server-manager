@@ -243,8 +243,22 @@ of them is re-applied on each start:
 | `COOKIE_SECURE` | no | The session cookie is marked `Secure` by default; behind plain HTTP (a LAN) set `false`, or the browser discards the cookie and login never sticks. |
 | `FSM_AUTOSTART` | no | `true` starts the game server (latest save) when the manager starts. |
 | `FSM_RCON_PORT` | no | Fixes the RCON listener port. Unset, the manager picks a free port at random each start. |
+| `FSM_WEB_BIND` | no | Interface the web UI is published on, `127.0.0.1` by default. A LAN or tailnet address needs `0.0.0.0`, and `COOKIE_SECURE=false` with it. |
+| `FSM_WEB_PORT` | no | Host port for the web UI; `7090` by default. |
+| `FSM_GAME_PORT` | no | Host port for the game, `34197` by default, so a second installation can sit beside the first. |
+| `FSM_DATA_DIR` | no | Where the manager keeps its own state; `./fsm-data` by default. Point it at an existing installation to upgrade that one in place. |
+| `FACTORIO_DIR` | no | Where the game's data lives (`saves/`, `mods/`, `config/`); `./factorio` by default, same idea as `FSM_DATA_DIR`. |
 
 Generate a key with `openssl rand -base64 32` when in doubt.
+
+**Upgrading an existing installation in place.** Set `FSM_DATA_DIR` and
+`FACTORIO_DIR` to the directories the old manager used and the new one starts on
+that installation's own state: its users, its mod portal credential, its saves, its
+mods and its `server-settings.json`. Nothing is copied and nothing is migrated — the
+same files are read and written. `conf.json` is the deliberate exception: it is
+configuration, rewritten from the environment on every start, so the admin password
+follows `ADMIN_PASS` rather than the old file. Reusing the old
+`COOKIE_ENCRYPTION_KEY` keeps existing sessions valid.
 
 ## Launching
 
