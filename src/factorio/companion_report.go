@@ -28,10 +28,18 @@ const (
 	companionCommand      = "/companion-report"
 	companionChunkCommand = "/companion-chunk"
 
-	// companionCacheTTL keeps a page on one RCON round per cadence. The browser
-	// polls every 5s and the cache expires at the same rate, so a page sees a
-	// fresh number each poll without more than one fetch per scope per 5s.
-	companionCacheTTL = 5 * time.Second
+	// companionCacheFresh is when a report is refreshed. The browser polls every
+	// 5s, so this is the cadence a page sees.
+	companionCacheFresh = 5 * time.Second
+
+	// The cache is kept for the life of the process — no expiry, no eviction and
+	// nothing written to disk, so it cannot wear the disk out and a page that opens
+	// after hours, days or weeks still starts on the numbers it last had. The age
+	// line is what says how old they are; only a restart of the manager starts a
+	// page empty, and the first fetch fills it.
+	//
+	// Bounded by the number of scopes there are (page x surface x window), which is
+	// tens of small reports, not by how long the manager runs.
 
 	// companionChunksMax refuses a manifest that would make the manager read for
 	// ever; the largest scope measures about five chunks.
@@ -60,15 +68,15 @@ var (
 // one was reading it, so the chunks on offer belong to a different report.
 var errStaleReport = errors.New("companion report was replaced mid-fetch")
 
-// GetScopedReport returns a scope, fetching it when the entry is missing or older
-// than the TTL. The cache is keyed by the scope and its arguments, so each page
-// and window is fetched at most once per TTL no matter how many viewers are on it.
+// GetScopedReport returns a scope. Whatever is stored is answered immediately,
+// however old it is — the cache is never expired — and once it is past its
+// freshness the refresh happens behind the request. A page therefore opens on the
+// numbers it last had rather than on a blank panel, and the age line carries the
+// honesty. Only a scope that has never been fetched in this process waits for a
+// round trip.
 //
-// Fetches never queue. If another report is being fetched right now, the caller
-// is answered immediately with what the cache holds — fresh if it happens to be,
-// stale otherwise — and the next poll picks up whatever the in-flight fetch
-// produced. A browser poll is a request for new data "only when the manager can",
-// never a wait in a behind-the-fetch queue.
+// Fetches never queue, and never pile up: a refresh is skipped when one is
+// already running, and the next poll picks up whatever it produced.
 func GetScopedReport(scope string, args ...string) *ScopedReport {
 	// An empty argument has to keep its position: the mod splits the command into
 	// words, so a gap would shift every argument after it — which once put the
@@ -85,6 +93,9 @@ func GetScopedReport(scope string, args ...string) *ScopedReport {
 	key := strings.Join(append([]string{scope}, positional...), " ")
 
 	if entry := cachedReport(key); entry != nil {
+		if time.Since(entry.FetchedAt) >= companionCacheFresh {
+			refreshBehindTheRequest(key)
+		}
 		return entry
 	}
 
@@ -109,6 +120,25 @@ func GetScopedReport(scope string, args ...string) *ScopedReport {
 	return entry
 }
 
+// refreshBehindTheRequest re-reads one scope without making the caller wait. The
+// fetch lock is the pile-up guard: if a fetch is already in flight this one is
+// dropped, and the next poll asks again five seconds later.
+func refreshBehindTheRequest(key string) {
+	if !fetchMutex.TryLock() {
+		return
+	}
+
+	go func() {
+		defer fetchMutex.Unlock()
+
+		entry := fetchScopedReport(key)
+
+		cacheMutex.Lock()
+		cache[key] = entry
+		cacheMutex.Unlock()
+	}()
+}
+
 // reportAnyAge returns the cached scope whatever its age, or a friendly empty
 // entry when the scope has never been fetched and cannot be fetched right now.
 func reportAnyAge(key string) *ScopedReport {
@@ -127,12 +157,15 @@ func reportAnyAge(key string) *ScopedReport {
 	}
 }
 
+// cachedReport is the stored report for a key, whenever it was fetched: the cache
+// does not expire, because the point of it is that a page opens on the last known
+// state rather than empty. It lives in memory only — nothing here touches the disk.
 func cachedReport(key string) *ScopedReport {
 	cacheMutex.Lock()
 	defer cacheMutex.Unlock()
 
 	entry, ok := cache[key]
-	if !ok || time.Since(entry.FetchedAt) >= companionCacheTTL {
+	if !ok || entry == nil {
 		return nil
 	}
 

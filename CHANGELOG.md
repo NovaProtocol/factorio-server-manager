@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The Power page opens on every planet's grid at once, and the Production page on every planet's output; clicking a row graphs that item, fluid or prototype
 
 ### Changed
+- The dashboards keep their last report in memory for the life of the manager instead of expiring it after five seconds, so a page opens on the last known numbers — minutes, days or weeks old — and only says how old they are. Nothing is written to disk, and refreshes still happen behind the request every five seconds
 - Removed the explanatory paragraphs under the dashboards, the console, the credentials page, the companion card and the game settings page. The panels show their data and their controls, nothing else
 - The compose file can be pointed at an existing installation: `FSM_DATA_DIR` and `FACTORIO_DIR` say where the manager's state and the game's data live, so an upgrade keeps the users, saves, mods and server settings already there instead of starting empty. `FSM_WEB_BIND`, `FSM_WEB_PORT` and `FSM_GAME_PORT` move the published ports, so a second installation can sit beside the first
 - The dashboards read the companion mod one report scope at a time, cached for 5 seconds and shared between viewers, instead of polling one large document every 20 seconds; a browser poll is never queued behind a running fetch — it is answered with the last data and refreshed on the next poll

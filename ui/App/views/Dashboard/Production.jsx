@@ -94,7 +94,7 @@ const Production = () => {
     const [timeWindow, setTimeWindow] = useState("1h");
     const [selected, setSelected] = useState(null);
     const fetchProduction = useCallback(() => companion.production(surface, timeWindow), [surface, timeWindow]);
-    const {payload, isLoading, updatedAt} = useScopedReport(`production|${surface}|${timeWindow}`, fetchProduction);
+    const {payload, isLoading, updatedAt, dataAge} = useScopedReport(`production|${surface}|${timeWindow}`, fetchProduction);
 
     const report = payload?.report;
     const activeSurface = surface || report?.surface || '';
@@ -128,7 +128,7 @@ const Production = () => {
                 content={
                     <>
                         <Controls surfaces={[]} surface={activeSurface} onSurface={setSurface}
-                                  updatedAt={updatedAt} hideSurface/>
+                                  updatedAt={updatedAt} dataAge={dataAge} hideSurface/>
 
                         {isLoading && !report
                             ? <p className="text-gray-light">Reading production…</p>

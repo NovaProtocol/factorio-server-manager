@@ -92,7 +92,7 @@ const Power = () => {
     }, []);
 
     const fetchPower = useCallback(() => companion.power(surface, timeWindow), [surface, timeWindow]);
-    const {payload, isLoading, updatedAt} = useScopedReport(`power|${surface}|${timeWindow}`, fetchPower);
+    const {payload, isLoading, updatedAt, dataAge} = useScopedReport(`power|${surface}|${timeWindow}`, fetchPower);
 
     const report = payload?.report;
     const lifetime = timeWindow === 'all';
@@ -113,7 +113,16 @@ const Power = () => {
     const graph = graphPayload?.report;
     const watts = value => reportWatts(report, value);
     const graphTitle = series === 'all' ? `${activeSurface} grid total` : series;
-    const age = updatedAt ? Math.max(0, Math.round((now - updatedAt) / 1000)) : null;
+    // The manager answers from its own cache, so the age worth showing is the one
+    // the payload carries, ticking up here between the five-second polls.
+    const sinceReceived = updatedAt ? Math.max(0, Math.round((now - updatedAt) / 1000)) : 0;
+    const age = dataAge === null || dataAge === undefined
+        ? (updatedAt ? sinceReceived : null)
+        : dataAge + sinceReceived;
+    const ageText = seconds => seconds < 60 ? `${seconds}s`
+        : seconds < 3600 ? `${Math.floor(seconds / 60)}m`
+            : seconds < 86400 ? `${Math.floor(seconds / 3600)}h`
+                : `${Math.floor(seconds / 86400)}d`;
 
     return (
         <>
@@ -123,7 +132,7 @@ const Power = () => {
                 content={
                     <>
                         <div className="text-right text-sm mb-2 text-gray-light">
-                            {age === null ? 'reading…' : `updated ${age}s ago · refreshes itself every 5s`}
+                            {age === null ? 'reading…' : `updated ${ageText(age)} ago · refreshes itself every 5s`}
                         </div>
 
                         {isLoading && !report

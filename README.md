@@ -137,11 +137,13 @@ units. One series at a time is deliberate: 300 points is a couple of kilobytes, 
 the RCON transport the reports travel over caps a frame near 4KB.
 
 Reports are fetched on demand for the page being viewed rather than polled as one
-document, cached for 5 seconds and shared between viewers, so a busy page is one
-game query rather than one per browser. A fetch never queues a browser behind it:
-while a report is being fetched a poll is answered at once with the last data the
-manager has, and the next 5s poll picks up the completed result. The browser caches
-nothing; the manager is the only cache.
+document, and cached in memory — kept for the life of the manager process, shared
+between viewers, never written to disk — so a page opens on the numbers it last had
+instead of a blank panel and the age line says how old they are. Refreshes happen
+behind the request every 5 seconds, so a fetch never queues a browser behind it: the
+poll is answered at once with the last report the manager has, and the next poll
+picks up the completed one. Only a manager restart starts a page empty, and its
+first fetch fills it. The browser caches nothing; the manager is the only cache.
 
 ## Game speed
 

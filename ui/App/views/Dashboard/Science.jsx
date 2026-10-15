@@ -28,7 +28,7 @@ const Science = () => {
     const [selected, setSelected] = useState("all");
 
     const fetchScience = useCallback(() => companion.science(surface, timeWindow), [surface, timeWindow]);
-    const {payload, isLoading, updatedAt} = useScopedReport(`science|${surface}|${timeWindow}`, fetchScience);
+    const {payload, isLoading, updatedAt, dataAge} = useScopedReport(`science|${surface}|${timeWindow}`, fetchScience);
 
     const report = payload?.report;
     const activeSurface = surface || report?.surface || '';
@@ -63,7 +63,7 @@ const Science = () => {
                 content={
                     <>
                         <Controls surfaces={surfaces} surface={activeSurface} onSurface={setSurface}
-                                  updatedAt={updatedAt}/>
+                                  updatedAt={updatedAt} dataAge={dataAge}/>
 
                         <WindowTabs value={timeWindow} onChange={setTimeWindow}/>
 

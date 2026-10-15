@@ -10,8 +10,9 @@ import (
 )
 
 // staleAfter is when a report is old enough that the page should say so. The
-// pages poll every 15s, so this only trips when something is actually wrong.
-const staleAfter = 60 * time.Second
+// manager keeps answering from an in-memory cache that never expires, so this tells
+// a reader the number in front of them did not come from the last few polls.
+const staleAfter = 5 * time.Minute
 
 // The windows the statistics GUI exposes, plus "all" for the cumulative counts.
 // Anything else is refused rather than passed to the game.
