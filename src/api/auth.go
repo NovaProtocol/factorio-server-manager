@@ -23,13 +23,6 @@ const authenticatedUserKey contextKey = "authenticatedUser"
 
 type User bootstrap.User
 
-// sessionCookieName is the cookie this manager keeps its session in. It is
-// deliberately not "authentication": cookies are scoped by host, not by port,
-// so an older manager running on the same host would overwrite this session
-// (and this manager would delete its cookie as unreadable). A distinct name
-// lets several managers share a host without signing each other out.
-const sessionCookieName = "factorio_multiworld_session"
-
 type Auth struct {
 	db *gorm.DB
 }
@@ -304,7 +297,7 @@ func (a *Auth) changePassword(username, password string) error {
 // middleware function, that will be called for every request, that has to be authorized
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := sessionStore.Get(r, sessionCookieName)
+		session, err := sessionStore.Get(r, "authentication")
 		if err != nil {
 			if session != nil {
 				session.Options.MaxAge = -1
